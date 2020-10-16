@@ -9,6 +9,20 @@ import os
 
 
 def connect_server(server, drive):
+    """Connect to a drive on a server. Uses Apple's osascript.
+
+    Parameters
+    ----------
+    server : str
+        Server name or IP address
+    drive : str
+        Drive name
+
+    Returns
+    -------
+    output : subprocess returns
+    """
+
     command = 'mount volume "smb://{}/{}"'.format(server, drive)
     output = subprocess.run(["osascript", "-e", command], capture_output=True)
     return output
@@ -18,6 +32,9 @@ def connect_server(server, drive):
 
 # -> R/V ARMSTRONG
 def connect_servers_armstrong():
+    """
+    Connect to drives data_on_memory and science_share on R/V Armstrong
+    """
     vol = Path("/Volumes/")
     server = "10.100.100.30"
     drives = ["data_on_memory", "science_share"]

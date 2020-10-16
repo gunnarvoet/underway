@@ -11,8 +11,19 @@ import os
 
 from . import network
 
+
 class Underway:
     def __init__(self, ship, localdir):
+        """Generate underway object.
+
+        Parameters
+        ----------
+        ship : str ["armstrong"]
+            
+        localdir : PosixPath
+            Path to local data directory. Will have subdirectories "met", "ctd" and "sadcp".
+        """
+
         self.ship = ship
         self.localdir = localdir
         self.local_met = localdir / "met"
@@ -34,18 +45,23 @@ class Underway:
         # sync shipboard adcp data
         sync_sadcp_armstrong(self.local_sadcp)
 
-
     def sync_ctd_data(self):
+        """Sync CTD data from ship server.
+        """
         sync_ctd_data(self.remote_ctd, self.local_ctd)
 
 
 def sync_met_data(remotedir, local_met, pattern):
+    """Sync met data from ship server.
+    """
     print("syncing underway met data from ship server")
     for f in sorted(list(remotedir.glob(pattern))):
         subprocess.call(["rsync", "-avz", f, local_met])
 
 
 def sync_ctd_data(remote_ctd, local_ctd):
+    """Sync CTD data from ship server.
+    """
     print("syncing ctd data from ship server")
     subprocess.call(["rsync", "-avz", remote_ctd.as_posix() + "/", local_ctd])
     ctd_files_chmod(local_ctd)
@@ -231,11 +247,23 @@ def add_attributes_armstrong(a):
 
 
 def sync_sadcp_armstrong(local_sadcp):
-    wh300path = Path('/Volumes/data_on_memory/adcp/proc/wh300/contour/wh300.nc')
-    os150nbpath = Path('/Volumes/data_on_memory/adcp/proc/os150nb/contour/os150nb.nc')
-    os38nbpath = Path('/Volumes/data_on_memory/adcp/proc/os38nb/contour/os38nb.nc')
+    """Sync R/V Armstrong shipboard ADCP data
+
+    Parameters
+    ----------
+    local_sadcp : 
+        
+
+    """
+
+    wh300path = Path("/Volumes/data_on_memory/adcp/proc/wh300/contour/wh300.nc")
+    os150nbpath = Path(
+        "/Volumes/data_on_memory/adcp/proc/os150nb/contour/os150nb.nc"
+    )
+    os38nbpath = Path(
+        "/Volumes/data_on_memory/adcp/proc/os38nb/contour/os38nb.nc"
+    )
     print("syncing sadcp data from ship server")
     subprocess.call(["rsync", "-avz", wh300path.as_posix(), local_sadcp])
     subprocess.call(["rsync", "-avz", os150nbpath.as_posix(), local_sadcp])
     subprocess.call(["rsync", "-avz", os38nbpath.as_posix(), local_sadcp])
-
