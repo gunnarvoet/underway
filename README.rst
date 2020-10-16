@@ -1,8 +1,7 @@
-===
 underway
-===
+========
 
-Shipboard underway data handling
+Shipboard underway data handling in python
 
 * Free software: MIT license
 
@@ -16,3 +15,9 @@ Features
 * Process met data into xarray.Dataset
 
 * Process sadcp data into xarray.Dataset
+
+Ships
+-----
+Currently supporting
+
+* R/V Neil Armstrong
