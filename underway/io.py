@@ -36,6 +36,7 @@ class Underway:
             self.read_all_met = read_all_met_armstrong
             self.remote_ctd = Path("/Volumes/data_on_memory/ctd/")
             self.connect = network.connect_servers_armstrong
+            self.position = network.get_position_armstrong
         # connect to ship servers
         self.connect()
         # sunc underway met data

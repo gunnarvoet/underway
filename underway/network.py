@@ -6,6 +6,7 @@
 from pathlib import Path
 import subprocess
 import os
+import requests
 
 
 def connect_server(server, drive):
@@ -55,3 +56,23 @@ def connect_servers_armstrong():
             else:
                 print(out.stdout.decode("utf-8"))
                 print(out.stderr.decode("utf-8"))
+
+
+def get_position_armstrong():
+    r = requests.get("http://www.armstrong.whoi.edu/cgi-bin/sssg_gps.pl")
+    posdict = dict(lon="Longitude", lat="Latitude")
+    pos = dict()
+    for k, v in posdict.items():
+        lati = r.text.find(v)
+        latiend = r.text[lati:].find("</br>")
+        latstr = (
+            r.text[lati + 10 : lati + latiend]
+            .replace(" &#176 ", " ")
+            .strip()
+            .replace("  ", " ")
+            .split(" ")
+        )
+        dec = float(latstr[0]) + float(latstr[1]) / 60
+        dec = -1 * dec if latstr[2] == "W" or latstr[2] == "S" else dec
+        pos[k] = dec
+    return pos
