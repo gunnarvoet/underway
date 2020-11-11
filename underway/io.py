@@ -13,7 +13,7 @@ from . import network
 
 
 class Underway:
-    def __init__(self, ship, localdir):
+    def __init__(self, ship, localdir, atsea=True):
         """Generate underway object.
 
         Parameters
@@ -25,6 +25,7 @@ class Underway:
         """
 
         self.ship = ship
+        self.atsea = atsea
         self.localdir = localdir
         self.local_met = localdir / "met"
         self.local_ctd = localdir / "ctd"
@@ -37,14 +38,15 @@ class Underway:
             self.remote_ctd = Path("/Volumes/data_on_memory/ctd/")
             self.connect = network.connect_servers_armstrong
             self.position = network.get_position_armstrong
-        # connect to ship servers
-        self.connect()
-        # sunc underway met data
-        sync_met_data(self.remote_met, self.local_met, self.met_pattern)
-        # read met data
+        if atsea:
+            # connect to ship servers if at sea
+            self.connect()
+            # sunc underway met data
+            sync_met_data(self.remote_met, self.local_met, self.met_pattern)
+            # sync shipboard adcp data
+            sync_sadcp_armstrong(self.local_sadcp)
+        # read met data into data structure
         self.met = self.read_all_met(self.local_met)
-        # sync shipboard adcp data
-        sync_sadcp_armstrong(self.local_sadcp)
 
     def sync_ctd_data(self):
         """Sync CTD data from ship server.
