@@ -76,3 +76,31 @@ def get_position_armstrong():
         dec = -1 * dec if latstr[2] == "W" or latstr[2] == "S" else dec
         pos[k] = dec
     return pos
+
+
+# -> RRS Discovery
+def connect_servers_discovery():
+    """
+    Connect to drives data_on_memory and science_share on RRS Discovery
+    """
+    vol = Path("/Volumes/")
+    server = "10.100.100.30"
+    server = "dynas1.discovery.local"
+    drives = ["Public", "current_cruise"]
+    drives_local = [vol.joinpath(si) for si in drives]
+    # see if drives are connected already
+    volg = list(vol.glob("*"))
+    conn = {}
+    for si in drives:
+        sil = vol.joinpath(si)
+        conn[si] = False if sil in volg else True
+
+    for k, v in conn.items():
+        if v:
+            print("connecting to {}...".format(k))
+            out = connect_server(server, k)
+            if out.returncode == 0:
+                print("connected")
+            else:
+                print(out.stdout.decode("utf-8"))
+                print(out.stderr.decode("utf-8"))
