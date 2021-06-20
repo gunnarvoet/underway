@@ -50,11 +50,12 @@ class Underway:
             sync_underway_disco(self.local_met)
             sync_sadcp_disco(self.local_sadcp)
             sync_ctd_disco(self.local_ctd)
+            self.read_all_met = read_all_met_discovery
         if atsea:
             # connect to ship servers if at sea
             self.connect()
         # read met data into data structure
-        # self.met = self.read_all_met(self.local_met)
+        self.met = self.read_all_met(self.local_met)
 
     def sync_ctd_data(self):
         """Sync CTD data from ship server."""
@@ -63,7 +64,7 @@ class Underway:
 
 def rsync_underway_data(remotedir, local_met, pattern):
     """Sync underway data from ship server using rsync."""
-    print("syncing underway data from ship server")
+    print("syncing data from ship server")
     for f in sorted(list(remotedir.glob(pattern))):
         subprocess.call(["rsync", "-avz", f, local_met])
 
@@ -121,7 +122,15 @@ def ctd_files_chmod(local_ctd):
             f.chmod(400)
 
 
-# == VESSEL SPECIFIC ==
+def combine_netcdf(file_list):
+    readall = []
+    for f in sorted(file_list):
+        readall.append(xr.open_dataset(f))
+    b = xr.concat(readall, dim="time")
+    return b
+
+
+# === VESSEL SPECIFIC ===
 
 # -> RRS DISCOVERY
 def sync_underway_disco(local_met):
@@ -129,7 +138,6 @@ def sync_underway_disco(local_met):
     sources = dict(
         met=dict(dir="SURFMETV3", pattern="*.SURFMETv3"),
         gps=dict(dir="GPS", pattern="*position-POSMV_GPS.gps"),
-        dep=dict(dir="DEPTH", pattern="*sb_depth-EM120_DEPTH.depth"),
         tsg=dict(dir="TSG", pattern="*SBE45-SBE45.TSG"),
     )
     for src, p in sources.items():
@@ -149,7 +157,7 @@ def sync_sadcp_disco(local_sadcp):
         try:
             copy_underway_data(remote, local_sadcp)
         except PermissionError:
-            print(f'cannot copy {remote}')
+            pass
 
 
 def sync_ctd_disco(local_ctd):
@@ -158,6 +166,33 @@ def sync_ctd_disco(local_ctd):
     )
     # sync_ctd_data(remote_ctd, local_ctd)
     rsync_underway_data(remote_ctd, local_ctd, "*")
+
+
+def read_all_met_discovery(local_met):
+    sources = dict(
+        light="*Light-SURFMET.SURFMETv3",
+        met="*MET-SURFMET.SURFMETv3",
+        surf="*Surf-SURFMET.SURFMETv3",
+        gps="*position-POSMV_GPS.gps",
+        tsg="*SBE45-SBE45.TSG",
+    )
+    out = dict()
+    for key, pattern in sources.items():
+        files = sorted(local_met.glob(pattern))
+        out[key] = combine_netcdf(files)
+
+    # combine met, light, surf (they come with the same time stamps)
+    # interpolate gps, tsg to these
+    met_all = xr.merge(
+        [
+            out["light"],
+            out["met"],
+            out["surf"],
+            out["gps"].interp_like(out["met"]),
+            out["tsg"].interp_like(out["met"]),
+        ]
+    )
+    return met_all
 
 
 # -> R/V ARMSTRONG
