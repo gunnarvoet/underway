@@ -22,15 +22,18 @@ class Underway:
         ship : str ["armstrong", "discovery"]
             Select ship.
         localdir : PosixPath
-            Path to local data directory. Will have subdirectories "met", "ctd" and "sadcp".
+            Path to local data directory. Will have subdirectories "met", "ctd"
+            and "sadcp".
+        atsea : bool
+            Determine whether to sync data while at sea. Defaults to True.
         """
-
         self.ship = ship
         self.atsea = atsea
         self.localdir = localdir
         self.local_met = localdir / "met"
         self.local_ctd = localdir / "ctd"
         self.local_sadcp = localdir / "sadcp"
+        self.local_ladcp = localdir / "ladcp"
         if ship == "armstrong":
             self.remote_met = Path("/Volumes/data_on_memory/underway/proc")
             self.met_pattern = "AR20*.csv"
@@ -47,13 +50,19 @@ class Underway:
             )
         elif ship == "discovery":
             self.connect = network.connect_servers_discovery
-            sync_underway_disco(self.local_met)
-            sync_sadcp_disco(self.local_sadcp)
-            sync_ctd_disco(self.local_ctd)
             self.read_all_met = read_all_met_discovery
+            self.sync_gps =  sync_gps_disco
         if atsea:
             # connect to ship servers if at sea
             self.connect()
+            # sync data sources
+            print("syncing data with ship server")
+            sync_discovery(
+                self.local_met,
+                self.local_sadcp,
+                self.local_ctd,
+                self.local_ladcp,
+            )
         # read met data into data structure
         self.met = self.read_all_met(self.local_met)
 
@@ -64,14 +73,14 @@ class Underway:
 
 def rsync_underway_data(remotedir, local_met, pattern):
     """Sync underway data from ship server using rsync."""
-    print("syncing data from ship server")
+    # print("syncing data from ship server")
     for f in sorted(list(remotedir.glob(pattern))):
         subprocess.call(["rsync", "-avz", f, local_met])
 
 
 def copy_underway_data(remotedir, local_met, pattern=None):
     """Copy underway data from ship server."""
-    print("syncing data from ship server")
+    # print("syncing data from ship server")
     if pattern:
         files = sorted(list(remotedir.glob(pattern)))
     else:
@@ -98,7 +107,7 @@ def copy_underway_data(remotedir, local_met, pattern=None):
 
 def sync_ctd_data(remote_ctd, local_ctd):
     """Sync CTD data from ship server."""
-    print("syncing ctd data from ship server")
+    # print("syncing ctd data from ship server")
     subprocess.call(["rsync", "-avzs", remote_ctd.as_posix() + "/", local_ctd])
     ctd_files_chmod(local_ctd)
 
@@ -133,6 +142,14 @@ def combine_netcdf(file_list):
 # === VESSEL SPECIFIC ===
 
 # -> RRS DISCOVERY
+def sync_discovery(local_met, local_sadcp, local_ctd, local_ladcp):
+    network.connect_servers_discovery()
+    sync_underway_disco(local_met)
+    sync_sadcp_disco(local_sadcp)
+    sync_ctd_disco(local_ctd)
+    sync_ladcp_disco(local_ladcp)
+
+
 def sync_underway_disco(local_met):
     techsas = Path("/Volumes/current_cruise/Ship_Systems/Data/TechSAS/NetCDF/")
     sources = dict(
@@ -145,19 +162,30 @@ def sync_underway_disco(local_met):
         copy_underway_data(remote, local_met, p["pattern"])
 
 
+def sync_gps_disco(local_met):
+    techsas = Path("/Volumes/current_cruise/Ship_Systems/Data/TechSAS/NetCDF/")
+    sources = dict(
+        gps=dict(dir="GPS", pattern="*position-POSMV_GPS.gps"),
+    )
+    for src, p in sources.items():
+        remote = techsas / p["dir"]
+        copy_underway_data(remote, local_met, p["pattern"])
+
+
 def sync_sadcp_disco(local_sadcp):
     """currently only running bb"""
     adcp = Path(
-        "/Volumes/current_cruise/Ship_Systems/Data/Acoustics/ADCP/UHDAS/DY132/proc/"
+        "/Volumes/current_cruise/Ship_Systems/Data/Acoustics/ADCP/UHDAS/DY132_part2/proc/"
     )
-    sources = ["os75bb", "os150bb"]
+    sources = ["os75bb", "os150bb", "os75nb", "os150nb"]
     for src in sources:
-        file = src + ".nc"
-        remote = adcp / src / "contour" / file
-        try:
-            copy_underway_data(remote, local_sadcp)
-        except PermissionError:
-            pass
+        files = [src + ".nc", "contour_uv.mat", "contour_xy.mat"]
+        for file in files:
+            remote = adcp / src / "contour" / file
+            try:
+                copy_underway_data(remote, local_sadcp / src)
+            except PermissionError:
+                pass
 
 
 def sync_ctd_disco(local_ctd):
@@ -165,7 +193,20 @@ def sync_ctd_disco(local_ctd):
         "/Volumes/current_cruise/Sensors_and_Moorings/DY132/CTD/Data/CTD Raw Data"
     )
     # sync_ctd_data(remote_ctd, local_ctd)
-    rsync_underway_data(remote_ctd, local_ctd, "*")
+    rsync_underway_data(remote_ctd, local_ctd / "raw", "*")
+
+
+def sync_ladcp_disco(local_ladcp):
+    remote_ladcp = Path(
+        "/Volumes/current_cruise/Sensors_and_Moorings/DY132/LADCP"
+    )
+    remote_primary = remote_ladcp / "Master data"
+    remote_secondary = remote_ladcp / "Slave data"
+    # sync ladcp data
+    rsync_underway_data(remote_primary, local_ladcp / "raw" / "primary", "*")
+    rsync_underway_data(
+        remote_secondary, local_ladcp / "raw" / "secondary", "*"
+    )
 
 
 def read_all_met_discovery(local_met):

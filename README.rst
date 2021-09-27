@@ -21,3 +21,4 @@ Ships
 Currently supporting
 
 * R/V Neil Armstrong
+* RRS Discovery
