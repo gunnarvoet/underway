@@ -24,7 +24,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Oceanography",
     ]
 requires-python = ">= 3.9"
-dependencies = ["numpy", "pandas", "xarray", "pynmeagps"],
+dependencies = ["numpy", "pandas", "xarray", "pynmeagps"]
 
 [project.urls]
 # Homepage = "https://example.com"
@@ -43,6 +43,4 @@ addopts = []
 xfail_strict = true
 filterwarnings = ["error"]
 log_cli_level = "info"
-testpaths = [
-    "underway/tests",
-    ]
+testpaths = ["underway/tests", ]
