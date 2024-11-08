@@ -31,6 +31,33 @@ def connect_server(server, drive):
 
 # == VESSEL SPECIFIC ==
 
+# -> R/V REVELLE
+def connect_servers_revelle():
+    """
+    Connect to drives cruise and science_party_share on R/V Revelle
+    """
+    vol = Path("/Volumes/")
+    server = "rr-sci-filesvr.ucsd.edu"
+    drives = ["cruise", "science_party_share"]
+    drives_local = [vol.joinpath(si) for si in drives]
+    # see if drives are connected already
+    volg = list(vol.glob("*"))
+    conn = {}
+    for si in drives:
+        sil = vol.joinpath(si)
+        conn[si] = False if sil in volg else True
+
+    for k, v in conn.items():
+        if v:
+            print("connecting to {}...".format(k))
+            out = connect_server(server, k)
+            if out.returncode == 0:
+                print("connected")
+            else:
+                print(out.stdout.decode("utf-8"))
+                print(out.stderr.decode("utf-8"))
+
+
 # -> R/V ARMSTRONG
 def connect_servers_armstrong():
     """
