@@ -2,8 +2,6 @@
 
 Research vessel underway data handling. Everything is under heavy development and may change at any time.
 
-* Free software: MIT license
-
 # Features
 * Connect, reconnect to ship server (currently macos only, uses Apple's `osascript`) 
 
