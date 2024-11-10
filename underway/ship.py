@@ -19,8 +19,6 @@ import shutil
 from pynmeagps import NMEAReader
 import pynmea2
 
-import gvpy as gv
-
 import underway
 
 

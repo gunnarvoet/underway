@@ -24,7 +24,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Oceanography",
     ]
 requires-python = ">= 3.9"
-dependencies = ["numpy", "pandas", "xarray", "pynmeagps", "pynmea2"]
+dependencies = ["numpy", "matplotlib", "pandas", "xarray", "pynmeagps", "pynmea2"]
 
 [project.urls]
 # Homepage = "https://example.com"
