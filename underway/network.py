@@ -31,6 +31,37 @@ def connect_server(server, drive):
 
 # == VESSEL SPECIFIC ==
 
+# -> R/V SIKULIAQ
+def connect_servers_sikuliaq():
+    """
+    Connect to drives share-data and share-sci on R/V Sikuliaq
+    """
+    vol = Path("/Volumes/")
+    server_sci = "share-sci.sikuliaq.alaska.edu"
+    server_data = "share-data.sikuliaq.alaska.edu"
+    servers = [server_sci, server_data]
+    drives = ["sci", "data"]
+    drives_local = [vol.joinpath(si) for si in drives]
+
+    # see if drives are connected already
+    volg = list(vol.glob("*"))
+    conn = {}
+    serv = {}
+    for si, server in zip(drives, servers):
+        sil = vol.joinpath(si)
+        conn[si] = False if sil in volg else True
+        serv[si] = server
+
+    for k, v in conn.items():
+        if v:
+            print("connecting to {}...".format(k))
+            out = connect_server(serv[k], k)
+            if out.returncode == 0:
+                print("connected")
+            else:
+                print(out.stdout.decode("utf-8"))
+                print(out.stderr.decode("utf-8"))
+
 # -> R/V REVELLE
 def connect_servers_revelle():
     """

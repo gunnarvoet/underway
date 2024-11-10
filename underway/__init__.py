@@ -1,9 +1,9 @@
 
-__all__ = ["io", "network"]
+__all__ = ["io", "network", "ship"]
 
 __author__ = "Gunnar Voet"
 __email__ = "gvoet@ucsd.edu"
-__version__ = "0.1.0"
+__version__ = "2024.11"
 
 # workaround for when whatever is defined as the default backend is not around:
 try:
