@@ -76,10 +76,6 @@ class Underway(ABC):
     def sync_data(self):
         pass
 
-    @abstractmethod
-    def set_quickplot_variables(self):
-        pass
-
     def quick_plot_wind_speed(self):
         fig, ax = underway.utils.quickfig(grid=True)
         self.met[self.metvar_wind_speed].plot(ax=ax)
@@ -132,9 +128,6 @@ class Sikuliaq(Underway):
                 create_dir = self.localdir / dir / rp
                 setattr(self, f"local_{dir}_{rp}", create_dir)
                 create_dir.mkdir(exist_ok=True)
-
-    def set_quickplot_variables(self):
-        self.metvar_wind_speed = "true_wind_speed_stbd"
 
     def connect(self):
         underway.network.connect_servers_sikuliaq()
