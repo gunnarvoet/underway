@@ -14,7 +14,7 @@ import os
 import shutil
 from pynmeagps import NMEAReader
 
-from . import network
+import underway
 
 # Save the two-digit year as a constant
 YY = datetime.datetime.utcnow().strftime("%y")
@@ -52,8 +52,8 @@ class Underway:
             self.read_met_file = read_met_file_armstrong
             self.read_all_met = read_all_met_armstrong
             self.remote_ctd = Path("/Volumes/data_on_memory/ctd/")
-            self.connect = network.connect_servers_armstrong
-            self.position = network.get_position_armstrong
+            self.connect = underway.network.connect_servers_armstrong
+            self.position = underway.network.get_position_armstrong
             if atsea:
                 self.connect()
                 print("syncing sadcp data...")
@@ -71,7 +71,7 @@ class Underway:
                 self.sync_ctd_data()
 
         elif ship == "discovery":
-            self.connect = network.connect_servers_discovery
+            self.connect = underway.network.connect_servers_discovery
             self.read_all_met = read_all_met_discovery
             self.sync_gps = sync_gps_disco
             if atsea:
@@ -193,7 +193,7 @@ def combine_netcdf(file_list):
 
 # -> RRS DISCOVERY
 def sync_discovery(local_met, local_sadcp, local_ctd, local_ladcp):
-    network.connect_servers_discovery()
+    underway.network.connect_servers_discovery()
     sync_underway_disco(local_met)
     sync_sadcp_disco(local_sadcp)
     sync_ctd_disco(local_ctd)

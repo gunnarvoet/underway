@@ -1,5 +1,4 @@
-
-__all__ = ["io", "network", "ship"]
+__all__ = ["io", "network", "ship", "utils"]
 
 __author__ = "Gunnar Voet"
 __email__ = "gvoet@ucsd.edu"
@@ -13,4 +12,4 @@ except ImportError:
 
     mpl.use("Agg")
 
-from . import io, network, ship
+from . import io, network, ship, utils
