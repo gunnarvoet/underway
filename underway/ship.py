@@ -94,9 +94,6 @@ class Underway(ABC):
 
 
 class Sikuliaq(Underway):
-    # Save the two-digit year as a constant to use later on
-    _YY = datetime.datetime.utcnow().strftime("%y")
-
     def __init__(self, local_data, atsea=True, cruise_id=None, bathy=None):
         """Generate Sikuliaq underway object.
 
@@ -117,7 +114,6 @@ class Sikuliaq(Underway):
         super().__init__(local_data, atsea, cruise_id)
         self.ship = "sikuliaq"
         self.set_paths()
-        # self.parse_raw_gps()
 
     def set_paths(self):
         self.remote_lds = Path("/Volumes/data/SKQ202417S/lds/raw")
@@ -149,9 +145,6 @@ class Sikuliaq(Underway):
         cruise_id = self.cruise_id.upper()
         # self.remote_ctd = Path("/Volumes/cruise/ctd/")
         # self.remote_ladcp = Path("/Volumes/science_share/LADCP/")
-        # set the pattern of the files we are looking for
-        # self.gps_pattern = f"AR_GPS10_{self._YY}*.csv"
-
         self.connect()
         # print("syncing met data...")
         # rsync_underway_data(self.remote_met, self.local_met, self.met_pattern)

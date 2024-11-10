@@ -18,3 +18,21 @@ Currently supporting
 * RRS Discovery
 * R/V Roger Revelle
 * R/V Sikuliaq
+
+# Example
+The following example sets up an object of the `Sikuliaq` class.
+It will create subfolders in the `local_data` directory.
+
+```python
+import underway as uw
+S = uw.ship.Sikuliaq(
+    local_data="/path/to/your/local/cruise/dir/",
+    cruise_id="SKQ202417S",
+)
+# connect to ship server
+S.connect()
+# sync data to local computer
+S.sync_data()
+# process gps data and read as xarray.Dataset
+gps = S.read_gps_data()
+```
