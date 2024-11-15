@@ -46,7 +46,6 @@ class Underway(ABC):
         # if self.atsea:
         #     self.sync_data()
         #     self.met = self.read_all_met()
-        self.set_quickplot_variables()
 
     def create_base_dirs(self, localdir):
         if type(localdir) is not pathlib.PosixPath:
