@@ -112,14 +112,17 @@ class Sikuliaq(Underway):
         self.remote_lds = Path("/Volumes/data/SKQ202417S/lds/raw")
         self.remote_gps = self.remote_lds.joinpath("ins_seapath_position")
         self.remote_tsg = self.remote_lds.joinpath("tsg_sbe45_fwd")
+        self.remote_air = self.remote_lds.joinpath("met_met4a_fwdmast")
+        self.remote_wind = self.remote_lds.joinpath("wind_gill_fwdmast_true")
         self.remote_adcp = Path("/Volumes/data/SKQ202417S/adcp/raw/SKQ202417S/proc")
+        self.remote_ww = Path("/Volumes/sci/shipside/SKQ202417S/WireWalkerEmails/nc")
         self.remote_ctd = Path(
             f"/Volumes/data/{self.cruise_id}/ctd/raw/{self.cruise_id}"
         )
         # self.remote_ladcp = Path("/Volumes/science_share/LADCP/")
 
         # create directory non-standard directories
-        for dir in ["tsg"]:
+        for dir in ["tsg", "ww", "air", "wind"]:
             create_dir = self.localdir / dir
             setattr(self, f"local_{dir}", create_dir)
             create_dir.mkdir(exist_ok=True)
@@ -151,6 +154,14 @@ class Sikuliaq(Underway):
         self.sync_tsg_data(verbose=verbose)
         if verbose:
             print("-----")
+            print("syncing atmospheric data...")
+        self.sync_air_data(verbose=verbose)
+        if verbose:
+            print("-----")
+            print("syncing wind data...")
+        self.sync_wind_data(verbose=verbose)
+        if verbose:
+            print("-----")
             print("syncing adcp data...")
         self.sync_adcp_data(verbose=verbose)
         if verbose:
@@ -170,6 +181,38 @@ class Sikuliaq(Underway):
                 rsync_opts,
                 self.remote_tsg.as_posix() + "/",
                 self.local_tsg_raw.as_posix() + "/",
+            ]
+        )
+
+    def sync_air_data(self, verbose=False):
+        """Sync atmospheric data from ship server."""
+        rsync_opts = "-av" if verbose else "-a"
+        subprocess.call(
+            [
+                "rsync",
+                rsync_opts,
+                "--exclude",
+                "met_met4a_fwdmast.20241102T2051Z",
+                "--exclude",
+                "met_met4a_fwdmast.20241103T0000Z",
+                self.remote_air.as_posix() + "/",
+                self.local_air_raw.as_posix() + "/",
+            ]
+        )
+
+    def sync_wind_data(self, verbose=False):
+        """Sync wind data from ship server."""
+        rsync_opts = "-av" if verbose else "-a"
+        subprocess.call(
+            [
+                "rsync",
+                rsync_opts,
+                "--exclude",
+                "wind_gill_fwdmast_true.20241102T2051Z",
+                "--exclude",
+                "wind_gill_fwdmast_true.20241103T0000Z",
+                self.remote_wind.as_posix() + "/",
+                self.local_wind_raw.as_posix() + "/",
             ]
         )
 
@@ -200,78 +243,22 @@ class Sikuliaq(Underway):
         """Sync CTD data from ship server."""
         _sync_ctd_data(self.remote_ctd, self.local_ctd_raw, verbose=verbose)
 
+    def sync_ww_loc_data(self, verbose=False):
+        """Sync WW location data from ship server."""
+        copy_underway_data(
+            self.remote_ww,
+            self.local_ww_proc,
+            pattern=f"*.nc",
+            verbose=verbose,
+        )
+
     def read_all_met(self, start_time=None):
         pass
-        # yymmdd_today = self._utc_yymmdd()
-        # met_all = self.local_met.glob("*.MET")
-        # if start_time is not None:
-        #     met_all = [
-        #         file
-        #         for file in met_all
-        #         if self._yymmdd_to_datetime64(file.stem) >= start_time
-        #     ]
-        # readall = []
-        # for f in sorted(met_all):
-        #     ncfile = f.with_suffix(".nc")
-        #     if f.stem == yymmdd_today:
-        #         met = self._read_met_file(f)
-        #         # met.to_netcdf(ncfile)
-        #         # met.close()
-        #         readall.append(met)
-        #     elif ncfile.exists():
-        #         # read existing netcdf
-        #         tmp = xr.open_dataset(ncfile)
-        #         if tmp.time.shape[0] > 5758:
-        #             readall.append(tmp)
-        #         else:
-        #             print(f"update {f.name}")
-        #             met = self._read_met_file(f)
-        #             ncfile.unlink()
-        #             met.to_netcdf(ncfile)
-        #             met.close()
-        #             readall.append(met)
-        #     else:
-        #         print(f.name)
-        #         # read raw and write to netcdf if it does not exist
-        #         met = self._read_met_file(f)
-        #         met.to_netcdf(ncfile)
-        #         met.close()
-        #         readall.append(met)
-        # b = xr.concat(readall, dim="time")
-        # b = self._add_attributes_revelle(b)
-        # b = self._met_remove_outliers(b)
-        # return b
 
     def read_gps_data(self):
         self._proc_gps_files()
         gps = xr.open_mfdataset(self.local_gps_proc.as_posix() + "/*.nc")
         return gps
-
-    def _proc_gps_files(self):
-        utc_today = self._utc_yyyymmdd()
-        gps_raw_files = sorted(self.local_gps_raw.glob("ins_seapath*"))
-        for file in gps_raw_files:
-            yyyymmdd = file.name.split(".")[1].split("T")[0]
-            nc_name = f"skq202417s_gps_{yyyymmdd}.nc"
-            nc_path = self.local_gps_proc.joinpath(nc_name)
-            if not nc_path.exists():
-                print(f"parsing {yyyymmdd}")
-                ds = self._parse_gps_data_file(file)
-                ds.to_netcdf(nc_path)
-            elif utc_today == yyyymmdd:
-                gps = xr.open_dataset(nc_path)
-                header_length = underway.utils.determine_header_length(file)
-                existing_time_steps = len(gps.time)
-                # only update file if there is at least one minute of new data
-                if underway.utils.now_utc() - gps.time[-1].data > np.timedelta64(
-                    1, "m"
-                ):
-                    skiplines = -1 + header_length + existing_time_steps * 8
-                    ds = self._parse_gps_data_file(file, skiplines=skiplines)
-                    if ds is not None:
-                        new = xr.concat([gps, ds], dim="time")
-                        nc_path.unlink()
-                        new.to_netcdf(nc_path)
 
     def _parse_gps_data_file(self, file, skiplines=0):
         data = []
@@ -322,6 +309,263 @@ class Sikuliaq(Underway):
             return ds
         else:
             return None
+
+    def _proc_gps_files(self):
+        utc_today = self._utc_yyyymmdd()
+        gps_raw_files = sorted(self.local_gps_raw.glob("ins_seapath*"))
+        for file in gps_raw_files:
+            yyyymmdd = file.name.split(".")[1].split("T")[0]
+            nc_name = f"skq202417s_gps_{yyyymmdd}.nc"
+            nc_path = self.local_gps_proc.joinpath(nc_name)
+            if not nc_path.exists():
+                print(f"parsing {yyyymmdd}")
+                ds = self._parse_gps_data_file(file)
+                ds.to_netcdf(nc_path)
+            elif utc_today == yyyymmdd:
+                gps = xr.open_dataset(nc_path)
+                header_length = underway.utils.determine_header_length(file)
+                existing_time_steps = len(gps.time)
+                # only update file if there is at least one minute of new data
+                if underway.utils.now_utc() - gps.time[-1].data > np.timedelta64(
+                    1, "m"
+                ):
+                    skiplines = -1 + header_length + existing_time_steps * 8
+                    ds = self._parse_gps_data_file(file, skiplines=skiplines)
+                    if ds is not None:
+                        new = xr.concat([gps, ds], dim="time")
+                        nc_path.unlink()
+                        new.to_netcdf(nc_path)
+
+    def read_air_data(self):
+        # self._proc_air_files()
+        self._proc_lds_files("met_met4a_fwdmast", "air")
+        air = xr.open_mfdataset(self.local_air_proc.as_posix() + "/*.nc")
+        return air
+
+    def _proc_air_files(self):
+        utc_today = self._utc_yyyymmdd()
+        met_raw_files = sorted(self.local_met_raw.glob(f"met_met4a_fwdmast*Z"))
+        for file in met_raw_files:
+            yyyymmdd = file.name.split(".")[1].split("T")[0]
+            nc_name = f"skq202417s_met_{yyyymmdd}.nc"
+            nc_path = self.local_met_proc.joinpath(nc_name)
+            if not nc_path.exists():
+                print(f"parsing {yyyymmdd}")
+                ds = self._parse_met_data_file(file)
+                ds.to_netcdf(nc_path)
+            elif utc_today == yyyymmdd:
+                met = xr.open_dataset(nc_path)
+                existing_time_steps = len(met.time)
+                try:
+                    ds = self._parse_met_data_file(
+                        file, skip_extra_rows=existing_time_steps
+                    )
+                    if ds is not None:
+                        ds = xr.concat([met, ds], dim="time")
+                except:
+                    ds = met
+                nc_path.unlink()
+                ds.to_netcdf(nc_path)
+
+    def _parse_met_data_file(self, file, skip_extra_rows=0):
+        header_length = underway.utils.determine_header_length(file)
+        df = pd.read_csv(
+            file,
+            skiprows=header_length + skip_extra_rows,
+            sep=r"[,\t]",
+            usecols=[1, 4, 8, 11],
+            names=[
+                "time",
+                "barometric_pressure",
+                "air_temperature",
+                "relative_humidity",
+            ],
+            index_col=0,
+            parse_dates=True,
+            engine="python",
+            dtype={"p": np.float64, "t": np.float64, "rh": np.float64},
+        )
+        df.index = df.index.tz_convert(None)
+        ds = df.to_xarray()
+        ds.barometric_pressure.attrs = dict(
+            long_name="barometric pressure", units="bar"
+        )
+        ds.air_temperature.attrs = dict(long_name="air temperature", units="°C")
+        ds.relative_humidity.attrs = dict(long_name="relative humidity", units="%")
+        return ds
+
+    def read_wind_data(self):
+        self._proc_wind_files()
+        wind = xr.open_mfdataset(self.local_wind_proc.as_posix() + "/*.nc")
+        return wind
+
+    def _proc_wind_files(self):
+        utc_today = self._utc_yyyymmdd()
+        wind_raw_files = sorted(self.local_wind_raw.glob(f"wind_gill_fwdmast_true*Z"))
+        for file in wind_raw_files:
+            yyyymmdd = file.name.split(".")[1].split("T")[0]
+            nc_name = f"skq202417s_wind_{yyyymmdd}.nc"
+            nc_path = self.local_wind_proc.joinpath(nc_name)
+            if not nc_path.exists():
+                print(f"parsing {yyyymmdd}")
+                ds = self._parse_wind_data_file(file)
+                ds.to_netcdf(nc_path)
+            elif utc_today == yyyymmdd:
+                wind = xr.open_dataset(nc_path)
+                existing_time_steps = len(wind.time)
+                try:
+                    ds = self._parse_wind_data_file(
+                        file, skip_extra_rows=existing_time_steps
+                    )
+                    if ds is not None:
+                        ds = xr.concat([wind, ds], dim="time")
+                except:
+                    ds = wind
+                nc_path.unlink()
+                ds.to_netcdf(nc_path)
+
+    def _parse_wind_data_file(self, file, skip_extra_rows=0):
+        header_length = underway.utils.determine_header_length(file)
+        df = pd.read_csv(
+            file,
+            skiprows=header_length + skip_extra_rows,
+            sep=r"[,\t]",
+            usecols=[1, 3, 7, 9],
+            names=["time", "dir", "spd_kn", "spd_ms"],
+            index_col=0,
+            parse_dates=True,
+            engine="python",
+            dtype={"dir": np.float64, "spd_kn": np.float64, "spd_ms": np.float64},
+        )
+        df.index = df.index.tz_convert(None)
+        ds = df.to_xarray()
+        ds.dir.attrs = dict(long_name="wind direction", units="deg")
+        ds.spd_kn.attrs = dict(long_name="wind speed", units="kn")
+        ds.spd_ms.attrs = dict(long_name="wind speed", units="m/s")
+        return ds
+
+    def read_tsg_data(self):
+        self._proc_tsg_files()
+        tsg = xr.open_mfdataset(self.local_tsg_proc.as_posix() + "/*.nc")
+        return tsg
+
+    def _proc_tsg_files(self):
+        utc_today = self._utc_yyyymmdd()
+        tsg_raw_files = sorted(self.local_tsg_raw.glob(f"tsg_sbe45_fwd*Z"))
+        for file in tsg_raw_files:
+            yyyymmdd = file.name.split(".")[1].split("T")[0]
+            nc_name = f"skq202417s_tsg_{yyyymmdd}.nc"
+            nc_path = self.local_tsg_proc.joinpath(nc_name)
+            if not nc_path.exists():
+                print(f"parsing {yyyymmdd}")
+                ds = self._parse_tsg_data_file(file)
+                ds.to_netcdf(nc_path)
+            elif utc_today == yyyymmdd:
+                tsg = xr.open_dataset(nc_path)
+                existing_time_steps = len(tsg.time)
+                try:
+                    ds = self._parse_tsg_data_file(
+                        file, skip_extra_rows=existing_time_steps
+                    )
+                    if ds is not None:
+                        ds = xr.concat([tsg, ds], dim="time")
+                except:
+                    ds = tsg
+                nc_path.unlink()
+                ds.to_netcdf(nc_path)
+
+    def _parse_tsg_data_file(self, file, skip_extra_rows=0):
+        header_length = underway.utils.determine_header_length(file)
+        df = pd.read_csv(
+            file,
+            skiprows=header_length + skip_extra_rows,
+            sep=r"[,\t]",
+            usecols=[1, 2, 3, 4, 5],
+            names=["time", "t", "c", "s", "sspd"],
+            index_col=0,
+            parse_dates=True,
+            engine="python",
+            dtype={
+                "t": np.float64,
+                "c": np.float64,
+                "s": np.float64,
+                "sspd": np.float64,
+            },
+        )
+        df.index = df.index.tz_convert(None)
+        ds = df.to_xarray()
+        ds.t.attrs = dict(long_name="temperature", units="°C")
+        ds.c.attrs = dict(long_name="conductivity", units="S/m")
+        ds.s.attrs = dict(long_name="salinity", units="psu")
+        ds.sspd.attrs = dict(long_name="sound speed", units="m/s")
+        return ds
+
+    def _proc_lds_files(self, id, name):
+        utc_today = self._utc_yyyymmdd()
+        raw_files = sorted(self.localdir.joinpath(name).joinpath("raw").glob(f"{id}*Z"))
+        for file in raw_files:
+            yyyymmdd = file.name.split(".")[1].split("T")[0]
+            nc_name = f"{self.cruise_id.lower()}_{name}_{yyyymmdd}.nc"
+            nc_path = self.localdir.joinpath(name).joinpath("proc").joinpath(nc_name)
+            if not nc_path.exists():
+                print(f"parsing {name} {yyyymmdd}")
+                ds = self._parse_lds_file(file, name)
+                ds.to_netcdf(nc_path)
+            elif utc_today == yyyymmdd:
+                tsg = xr.open_dataset(nc_path)
+                existing_time_steps = len(tsg.time)
+                try:
+                    ds = self._parse_lds_file(
+                        file, name, skip_extra_rows=existing_time_steps
+                    )
+                    if ds is not None:
+                        ds = xr.concat([tsg, ds], dim="time")
+                except:
+                    ds = tsg
+                nc_path.unlink()
+                ds.to_netcdf(nc_path)
+
+    def _parse_lds_file(self, file, name, skip_extra_rows=0):
+        header_length = underway.utils.determine_header_length(file)
+        match name:
+            case "tsg":
+                usecols = [1, 2, 3, 4, 5]
+                var_names = ["time", "t", "c", "s", "sspd"]
+                long_names = ["temperature", "conductivity", "salinity", "sound speed"]
+                units = ["°C", "S/m", "psu", "m/s"]
+            case "wind":
+                usecols = [1, 3, 7, 9]
+                var_names = ["time", "wind_dir", "wind_spd_kn", "wind_spd_ms"]
+                long_names = ["wind direction", "wind speed", "wind speed"]
+                units = ["deg", "kn", "m/s"]
+            case "air":
+                usecols = [1, 4, 8, 11]
+                var_names=[
+                    "time",
+                    "barometric_pressure",
+                    "air_temperature",
+                    "relative_humidity",
+                ]
+                long_names = ["barometric pressure", "air temperature", "relative humidity"]
+                units = ["bar", "°C", "%"]
+
+        dtype = {name: np.float64 for name in var_names[1:]}
+        df = pd.read_csv(
+            file,
+            skiprows=header_length + skip_extra_rows,
+            sep=r"[,\t]",
+            usecols=usecols,
+            names=var_names,
+            index_col=0,
+            parse_dates=True,
+            engine="python",
+            dtype=dtype,
+        )
+        df.index = df.index.tz_convert(None)
+        ds = df.to_xarray()
+        for name, long_name, unit in zip(var_names[1:], long_names, units):
+            ds[name].attrs = dict(long_name=long_name, units=unit)
+        return ds
 
     def _utc_yyyymmdd(self):
         utcnow = underway.utils.now_utc()
