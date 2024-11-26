@@ -3,6 +3,7 @@
 """Module underway.utils with utility functions"""
 
 import datetime
+import shutil
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -148,3 +149,31 @@ def datetime64_to_str(dt64, unit="D"):
     """
 
     return np.datetime_as_string(dt64, unit=unit)
+
+
+def copy_files(remotedir, local_dir, pattern=None, verbose=False):
+    """Copy underway data from ship server."""
+    if pattern:
+        files = sorted(list(remotedir.glob(pattern)))
+    else:
+        files = [remotedir]
+    for f in files:
+        f_local = local_dir.joinpath(f.name)
+        if f_local.exists():
+            size_remote = f.stat().st_size
+            size_local = f_local.stat().st_size
+            if size_remote == size_local:
+                do_copy = 0
+            else:
+                do_copy = 1
+        else:
+            do_copy = 1
+        if do_copy:
+            # copy2 gave permission errors, switching to copyfile
+            # shutil.copy2(f, f_local)
+            shutil.copyfile(f, f_local)
+            if verbose:
+                print(f"copy {f.name}")
+    # Unlock files - we are copying file attributes and do not want any locked
+    # files, otherwise we are in trouble when syncing again.
+    # subprocess.call(["chflags", "-R", "nouchg", f"{local_dir}"])

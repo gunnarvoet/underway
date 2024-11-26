@@ -127,7 +127,6 @@ class Sikuliaq(Underway):
         for name, id in self.ids.items():
             setattr(self, f"remote_{name}", self.remote_lds.joinpath(id))
         self.remote_adcp = Path("/Volumes/data/SKQ202417S/adcp/raw/SKQ202417S/proc")
-        self.remote_ww = Path("/Volumes/sci/shipside/SKQ202417S/WireWalkerEmails/nc")
         self.remote_ctd = Path(
             f"/Volumes/data/{self.cruise_id}/ctd/raw/{self.cruise_id}"
         )
@@ -265,15 +264,6 @@ class Sikuliaq(Underway):
         """Sync CTD data from ship server."""
         _sync_ctd_data(self.remote_ctd, self.local_ctd_raw, verbose=verbose)
 
-    def sync_ww_loc_data(self, verbose=False):
-        """Sync WW location data from ship server."""
-        copy_underway_data(
-            self.remote_ww,
-            self.local_ww_proc,
-            pattern=f"*.nc",
-            verbose=verbose,
-        )
-
     def read_all_met(self, start_time=None):
         pass
 
@@ -328,7 +318,12 @@ class Sikuliaq(Underway):
         if not df.empty:
             df = df.set_index("time")
             ds = df.to_xarray()
-            ds = ds.dropna("time")
+            # these may help processing a corrupt file but you'll run into
+            # trouble updating today's file if any entries are dropped as we
+            # are skipping lines in the raw file based on the dataset length
+            # when updating.
+            # ds = ds.dropna("time")
+            # ds = ds.sortby("time")
             return ds
         else:
             return None
