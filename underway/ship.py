@@ -354,10 +354,6 @@ class Sikuliaq(Underway):
                     gps = xr.open_dataset(nc_path, chunks=dict(time=10000))
                     header_length = underway.utils.determine_header_length(file)
                     existing_time_steps = len(gps.time)
-                    # only update file if there is at least one minute of new data
-                    # if underway.utils.now_utc() - gps.time[-1].data > np.timedelta64(
-                        # 1, "m"
-                    # ):
                     skiplines = -1 + header_length + existing_time_steps * 8
                     ds = self._parse_gps_data_file(file, skiplines=skiplines)
                     if ds is not None:
@@ -383,6 +379,13 @@ class Sikuliaq(Underway):
     def _proc_lds_files(self, id, name):
         utc_today = self._utc_yyyymmdd()
         raw_files = sorted(self.localdir.joinpath(name).joinpath("raw").glob(f"{id}*Z"))
+        proc_files = sorted(
+            self.localdir.joinpath(name)
+            .joinpath("proc")
+            .glob(f"{self.cruise_id.lower()}*.nc")
+        )
+        proc_file_sizes = np.array([file.stat().st_size for file in proc_files])
+        max_proc_file_size = np.max(proc_file_sizes)
         for file in raw_files:
             yyyymmdd = file.name.split(".")[1].split("T")[0]
             nc_name = f"{self.cruise_id.lower()}_{name}_{yyyymmdd}.nc"
@@ -391,19 +394,21 @@ class Sikuliaq(Underway):
                 print(f"parsing {name} {yyyymmdd}")
                 ds = self._parse_lds_file(file, name)
                 ds.to_netcdf(nc_path)
-            elif utc_today == yyyymmdd:
-                tsg = xr.open_dataset(nc_path)
-                existing_time_steps = len(tsg.time)
-                try:
-                    ds = self._parse_lds_file(
-                        file, name, skip_extra_rows=existing_time_steps
-                    )
-                    if ds is not None:
-                        ds = xr.concat([tsg, ds], dim="time")
-                except:
-                    ds = tsg
-                nc_path.unlink()
-                ds.to_netcdf(nc_path)
+            else:
+                file_size = nc_path.stat().st_size
+                if utc_today == yyyymmdd or file_size < max_proc_file_size - 100:
+                    lds = xr.open_dataset(nc_path)
+                    existing_time_steps = len(lds.time)
+                    try:
+                        ds = self._parse_lds_file(
+                            file, name, skip_extra_rows=existing_time_steps
+                        )
+                        if ds is not None:
+                            ds = xr.concat([lds, ds], dim="time")
+                    except:
+                        ds = lds
+                    nc_path.unlink()
+                    ds.to_netcdf(nc_path)
 
     def _parse_lds_file(self, file, name, skip_extra_rows=0):
         header_length = underway.utils.determine_header_length(file)
