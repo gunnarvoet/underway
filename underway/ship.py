@@ -269,7 +269,12 @@ class Sikuliaq(Underway):
 
     def read_gps_data(self):
         self._proc_gps_files()
-        gps = xr.open_mfdataset(self.local_gps_proc.as_posix() + "/*.nc")
+        gps_proc_files = sorted(self.local_gps_proc.glob("*.nc"))
+        gps = combine_netcdf(gps_proc_files)
+        gps = gps.sortby("time")
+        _, ni = np.unique(gps.time, return_index=True)
+        gps = gps.isel(time=ni)
+        # gps = xr.open_mfdataset(self.local_gps_proc.as_posix() + "/*.nc")
         return gps
 
     def _parse_gps_data_file(self, file, skiplines=0):
@@ -331,6 +336,9 @@ class Sikuliaq(Underway):
     def _proc_gps_files(self):
         utc_today = self._utc_yyyymmdd()
         gps_raw_files = sorted(self.local_gps_raw.glob("ins_seapath*"))
+        # gps_proc_files = sorted(self.local_gps_proc.glob("*.nc"))
+        # proc_file_sizes = np.array([file.stat().st_size for file in gps_proc_files])
+        # median_proc_file_size = np.median(proc_file_sizes)
         for file in gps_raw_files:
             yyyymmdd = file.name.split(".")[1].split("T")[0]
             nc_name = f"skq202417s_gps_{yyyymmdd}.nc"
@@ -339,14 +347,17 @@ class Sikuliaq(Underway):
                 print(f"parsing {yyyymmdd}")
                 ds = self._parse_gps_data_file(file)
                 ds.to_netcdf(nc_path)
-            elif utc_today == yyyymmdd:
-                gps = xr.open_dataset(nc_path)
-                header_length = underway.utils.determine_header_length(file)
-                existing_time_steps = len(gps.time)
-                # only update file if there is at least one minute of new data
-                if underway.utils.now_utc() - gps.time[-1].data > np.timedelta64(
-                    1, "m"
-                ):
+            else:
+                file_size = nc_path.stat().st_size
+                # if utc_today == yyyymmdd or file_size < median_proc_file_size:
+                if utc_today == yyyymmdd or file_size < 6232711:
+                    gps = xr.open_dataset(nc_path, chunks=dict(time=10000))
+                    header_length = underway.utils.determine_header_length(file)
+                    existing_time_steps = len(gps.time)
+                    # only update file if there is at least one minute of new data
+                    # if underway.utils.now_utc() - gps.time[-1].data > np.timedelta64(
+                        # 1, "m"
+                    # ):
                     skiplines = -1 + header_length + existing_time_steps * 8
                     ds = self._parse_gps_data_file(file, skiplines=skiplines)
                     if ds is not None:
