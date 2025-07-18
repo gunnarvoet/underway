@@ -490,7 +490,7 @@ class Sikuliaq(Underway):
 
 class Revelle(Underway):
     # Save the two-digit year as a constant to use later on
-    _YY = datetime.datetime.utcnow().strftime("%y")
+    _YY = datetime.datetime.now(datetime.UTC).strftime("%y")
 
     def __init__(self, local_data, atsea=True, cruise_id=None, bathy=None):
         """Generate Revelle underway object.
@@ -777,7 +777,7 @@ class Revelle(Underway):
 
 class Armstrong(Underway):
     # Save the two-digit year as a constant to use later on
-    _YY = datetime.datetime.utcnow().strftime("%y")
+    _YY = datetime.datetime.now(datetime.UTC).strftime("%y")
 
     def __init__(self, local_data, atsea=True, cruise_id=None, bathy=None):
         """Generate Armstrong underway object.

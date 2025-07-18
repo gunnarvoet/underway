@@ -17,7 +17,7 @@ from pynmeagps import NMEAReader
 import underway
 
 # Save the two-digit year as a constant
-YY = datetime.datetime.utcnow().strftime("%y")
+YY = datetime.datetime.now(datetime.UTC).strftime("%y")
 
 
 class Underway:
