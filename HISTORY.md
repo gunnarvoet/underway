@@ -1,5 +1,10 @@
 # History
 
+## 2025.10
+
+-   Updates during cruise DY202 on RRS Discovery.
+-   Switch to `uv` for development and backend.
+
 ## 2024.11
 
 -   Changed to date versioning

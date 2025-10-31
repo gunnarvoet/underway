@@ -1,11 +1,11 @@
 # underway
 
-Research vessel underway data handling. Everything is under heavy development and may change at any time.
+Research vessel underway data handling. Everything here is under development and may change at any time.
 
 # Features
 * Connect, reconnect to ship server (currently macos only, uses Apple's `osascript`) 
 
-* Sync shipboard data (met, sadcp, ctd) using `rsync`
+* Sync shipboard data (MET, SADCP, CTD, LADCP) using `rsync`
 
 * Process met data into xarray.Dataset
 
@@ -20,8 +20,8 @@ Currently supporting
 * R/V Sikuliaq
 
 # Example
-The following example sets up an object of the `Sikuliaq` class.
-It will create subfolders in the `local_data` directory.
+The following example sets up an object of the `Sikuliaq` class.  It will
+create subfolders for various types of data in the `local_data` directory.
 
 ```python
 import underway as uw

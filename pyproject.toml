@@ -1,22 +1,20 @@
 [build-system]
-requires = ["setuptools", ]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools]
-packages = ["underway"]
+requires = ["uv_build>=0.8.22,<0.10.0"]
+build-backend = "uv_build"
 
 [project]
 name = "underway"
-version = "2024.11"
+version = "2025.10"
 authors = [
     {name = "Gunnar Voet", email = "gvoet@ucsd.edu"},
     ]
 description = "research vessel underway data handling"
 readme = "README.md"
-license = {file = "LICENSE"}
+license = "MIT"
+license-files = ["LICENSE", ]
 keywords = ["physical oceanography"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
     "Programming Language :: Python :: 3",
@@ -24,7 +22,15 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Oceanography",
     ]
 requires-python = ">= 3.9"
-dependencies = ["numpy", "matplotlib", "pandas", "xarray", "pynmeagps", "pynmea2"]
+dependencies = [
+    "matplotlib>=3.9.4",
+    # "numpy", "matplotlib", "pandas", "xarray", "pynmeagps", "pynmea2"
+    "numpy>=2.0.2",
+    "pandas>=2.3.3",
+    "pynmea2>=1.19.0",
+    "pynmeagps>=1.0.54",
+    "xarray>=2024.7.0",
+]
 
 [project.urls]
 # Homepage = "https://example.com"
@@ -32,6 +38,12 @@ dependencies = ["numpy", "matplotlib", "pandas", "xarray", "pynmeagps", "pynmea2
 Repository = "https://github.com/gunnarvoet/underway.git"
 Issues = "https://github.com/gunnarvoet/underway/issues"
 Changelog = "https://github.com/gunnarvoet/underway/blob/main/HISTORY.md"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.2",
+    "ruff>=0.14.3",
+]
 
 [tool.pytest.ini_options]
 # in general, do not place a `__init__.py` in your tests
@@ -43,4 +55,4 @@ addopts = []
 xfail_strict = true
 filterwarnings = ["error"]
 log_cli_level = "info"
-testpaths = ["underway/tests", ]
+testpaths = ["tests", ]
