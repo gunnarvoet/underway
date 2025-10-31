@@ -1124,7 +1124,7 @@ class Discovery(Underway):
         )
         for src, p in sources.items():
             remote = techsas / p["dir"]
-            copy_underway_data(remote, self.local_met, p["pattern"])
+            copy_underway_data(remote, self.local_met / "raw", p["pattern"])
 
     def sync_gps_disco(self):
         techsas = Path("/Volumes/current_cruise/Ship_Systems/Data/TechSAS/NetCDF/")
@@ -1181,7 +1181,7 @@ class Discovery(Underway):
         )
         out = dict()
         for key, pattern in sources.items():
-            files = sorted(self.local_met.glob(pattern))
+            files = sorted(self.local_met.joinpath("raw").glob(pattern))
             if key not in ignore:
                 out[key] = combine_netcdf(files)
 
