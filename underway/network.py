@@ -142,9 +142,9 @@ def connect_servers_discovery():
     Connect to drives data_on_memory and science_share on RRS Discovery
     """
     vol = Path("/Volumes/")
-    server = "10.100.100.30"
-    server = "dynas1.discovery.local"
-    drives = ["Public", "current_cruise"]
+    # server = "dynas1.discovery.local"
+    server = "dynetapp.discovery.ad.noc.ac.uk"
+    drives = ["science_public", "current_cruise"]
     drives_local = [vol.joinpath(si) for si in drives]
     # see if drives are connected already
     volg = list(vol.glob("*"))

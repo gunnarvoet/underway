@@ -1111,9 +1111,9 @@ class Discovery(Underway):
     def sync_data(self):
         self.connect()
         self.sync_met_disco()
-        sync_sadcp_disco(local_sadcp)
-        sync_ctd_disco(local_ctd)
-        sync_ladcp_disco(local_ladcp)
+        self.sync_sadcp_disco()
+        self.sync_ctd_disco()
+        self.sync_ladcp_disco()
 
     def sync_met_disco(self):
         techsas = Path("/Volumes/current_cruise/Ship_Systems/Data/TechSAS/NetCDF/")
@@ -1136,13 +1136,10 @@ class Discovery(Underway):
             copy_underway_data(remote, self.local_met, p["pattern"])
 
     def sync_sadcp_disco(self):
-        """currently only running bb"""
         adcp = Path(
-            # "/Volumes/current_cruise/Ship_Systems/Data/Acoustics/ADCP/UHDAS/DY132_part2/proc/"
-            # "/Volumes/current_cruise/Ship_Systems/Data/Acoustics/ADCP/UHDAS/DY138/proc/"
-            "/Volumes/current_cruise/Ship_Systems/Data/Acoustics/ADCP/UHDAS/DY153/proc/"
+            f"/Volumes/current_cruise/Ship_Systems/Data/Acoustics/ADCP/proc/"
         )
-        sources = ["os75bb", "os150bb", "os75nb", "os150nb"]
+        # sources = ["os75bb", "os150bb", "os75nb", "os150nb"]
         sources = ["os75nb", "os150nb"]
         for src in sources:
             files = [src + ".nc", "contour_uv.mat", "contour_xy.mat"]
@@ -1152,29 +1149,29 @@ class Discovery(Underway):
                     copy_underway_data(remote, self.local_sadcp / src)
                 except PermissionError:
                     pass
+                except FileNotFoundError as err:
+                    if "os75" in file and ".nc" in file:
+                        print("os75 data not found")
+                    elif "os150" in file and ".nc" in file:
+                        print("os150 data not found")
+                    else:
+                        pass
 
     def sync_ctd_disco(self):
         remote_ctd = Path(
             # "/Volumes/current_cruise/Sensors_and_Moorings/DY132/CTD/Data/CTD Raw Data"
-            "/Volumes/current_cruise/Sensors_and_Moorings/DY138/CTD/Data/CTD Raw Data"
+            # "/Volumes/current_cruise/Sensors_and_Moorings/DY138/CTD/Data/CTD Raw Data"
+            # f"/Volumes/current_cruise/Sensors_and_Moorings/{self.cruise_id}/CTD/Data/CTD Raw Data"
+            "/Volumes/current_cruise/Sensors_and_Moorings/CTD/Data/Raw/"
         )
         # sync_ctd_data(remote_ctd, local_ctd)
         rsync_underway_data(remote_ctd, self.local_ctd_raw, "*")
 
     def sync_ladcp_disco(self):
-        remote_ladcp = Path(
-            # "/Volumes/current_cruise/Sensors_and_Moorings/DY132/LADCP"
-            "/Volumes/current_cruise/Sensors_and_Moorings/DY138/LADCP"
-        )
-        remote_primary = remote_ladcp / "Master data"
-        remote_secondary = remote_ladcp / "Slave data"
-        # sync ladcp data
-        rsync_underway_data(remote_primary, self.local_ladcp / "raw" / "primary", "*")
-        rsync_underway_data(
-            remote_secondary, self.local_ladcp / "raw" / "secondary", "*"
-        )
+        remote_ladcp = Path("/Volumes/current_cruise/Sensors_and_Moorings/LADCP/Data")
+        rsync_underway_data(remote_ladcp, self.local_ladcp / "raw", "*")
 
-    def read_all_met(self):
+    def read_all_met(self, ignore=[]):
         sources = dict(
             light="*Light-SURFMET.SURFMETv3",
             met="*MET-SURFMET.SURFMETv3",
@@ -1185,7 +1182,8 @@ class Discovery(Underway):
         out = dict()
         for key, pattern in sources.items():
             files = sorted(self.local_met.glob(pattern))
-            out[key] = combine_netcdf(files)
+            if key not in ignore:
+                out[key] = combine_netcdf(files)
 
         # fix double time stamp bug
         _, ni = np.unique(out["met"].time, return_index=True)
@@ -1195,19 +1193,27 @@ class Discovery(Underway):
         out["light"] = out["light"].isel(time=ni)
         _, ni = np.unique(out["surf"].time, return_index=True)
         out["surf"] = out["surf"].isel(time=ni)
-        _, ni = np.unique(out["tsg"].time, return_index=True)
-        out["tsg"] = out["tsg"].isel(time=ni)
+        if False:
+            _, ni = np.unique(out["tsg"].time, return_index=True)
+            out["tsg"] = out["tsg"].isel(time=ni)
         # combine met, light, surf (they come with the same time stamps)
         # interpolate gps, tsg to these
-        met_all = xr.merge(
-            [
-                out["light"],
-                out["met"],
-                out["surf"],
-                out["gps"].interp_like(out["met"]),
-                out["tsg"].interp_like(out["met"]),
-            ]
-        )
+        met_all = [out[var] for var in ["light", "met", "surf"] if var not in ignore]
+        for var in ["gps", "tsg"]:
+            if var not in ignore:
+                met_all.append(out[var].interp_like(out["met"]))
+        met_all = xr.merge(met_all)
+        # met_all = xr.merge(
+        #     [
+        #         out["light"],
+        #         out["met"],
+        #         out["surf"],
+        #         out["gps"].interp_like(out["met"]),
+        #         out["tsg"].interp_like(out["met"]),
+        #     ]
+        # )
+        met_all.time.attrs["long_name"] = ""
+        met_all = met_all.rename_vars(long="lon")
         return met_all
 
 
@@ -1222,6 +1228,8 @@ def rsync_underway_data(remotedir, local_met, pattern, verbose=False):
 def copy_underway_data(remotedir, local_dir, pattern=None, verbose=False):
     """Copy underway data from ship server."""
     # print("syncing data from ship server")
+    if not local_dir.exists():
+        local_dir.mkdir()
     if pattern:
         files = sorted(list(remotedir.glob(pattern)))
     else:
