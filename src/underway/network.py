@@ -34,13 +34,15 @@ def connect_server(server, drive):
 # -> R/V SIKULIAQ
 def connect_servers_sikuliaq():
     """
-    Connect to drives share-data and share-sci on R/V Sikuliaq
+    Connect to science share and shipboard data drives on R/V Sikuliaq.
+
+    Updated Nov 2025.
     """
     vol = Path("/Volumes/")
-    server_sci = "share-sci.sikuliaq.alaska.edu"
-    server_data = "share-data.sikuliaq.alaska.edu"
+    server_sci = "files.sikuliaq.alaska.edu"
+    server_data = "data.sikuliaq.alaska.edu"
     servers = [server_sci, server_data]
-    drives = ["sci", "data"]
+    drives = ["science", "CruiseData"]
     drives_local = [vol.joinpath(si) for si in drives]
 
     # see if drives are connected already

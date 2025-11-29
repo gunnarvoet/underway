@@ -102,7 +102,8 @@ class Sikuliaq(Underway):
 
         Notes
         -----
-        The Sikuliaq doesn't have a nice met system and we have to gather data from various sources.
+        The Sikuliaq doesn't have a met system writing all data into one file
+        so we have to gather data from various sources.
         """
         super().__init__(local_data, atsea, cruise_id)
         self.ship = "sikuliaq"
@@ -121,14 +122,14 @@ class Sikuliaq(Underway):
         self.ids = ids
 
     def set_paths(self):
-        self.remote_lds = Path("/Volumes/data/SKQ202417S/lds/raw")
+        self.remote_lds = Path(f"/Volumes/CruiseData/{self.cruise_id}/lds/raw")
         self.remote_gps = self.remote_lds.joinpath("ins_seapath_position")
         # set lds paths
         for name, id in self.ids.items():
             setattr(self, f"remote_{name}", self.remote_lds.joinpath(id))
-        self.remote_adcp = Path("/Volumes/data/SKQ202417S/adcp/raw/SKQ202417S/proc")
+        self.remote_adcp = Path(f"/Volumes/CruiseData/{self.cruise_id}/adcp/raw/{self.cruise_id}/proc")
         self.remote_ctd = Path(
-            f"/Volumes/data/{self.cruise_id}/ctd/raw/{self.cruise_id}"
+            f"/Volumes/CruiseData/{self.cruise_id}/ctd/raw/{self.cruise_id}"
         )
         # self.remote_ladcp = Path("/Volumes/science_share/LADCP/")
 
@@ -146,7 +147,7 @@ class Sikuliaq(Underway):
     def connect(self):
         underway.network.connect_servers_sikuliaq()
 
-    def sync_data(self, verbose=False):
+    def sync_data(self, verbose=False, exclude_sources=[]):
         cruise_id = self.cruise_id.upper()
         self.connect()
         if verbose:
@@ -173,13 +174,11 @@ class Sikuliaq(Underway):
             print("-----")
             print("syncing adcp data...")
         self.sync_adcp_data(verbose=verbose)
-        if verbose:
-            print("-----")
-            print("syncing ctd data...")
-        self.sync_ctd_data(verbose=verbose)
-        # if self.cruise_id == "ar73":
-        #     print("syncing ladcp data...")
-        #     self.ar73_sync_ladcp()
+        if "ctd" not in exclude_sources:
+            if verbose:
+                print("-----")
+                print("syncing ctd data...")
+            self.sync_ctd_data(verbose=verbose)
 
     def sync_wave_data(self, verbose=False):
         """Sync Wamos data from ship server."""
