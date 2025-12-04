@@ -383,8 +383,11 @@ class Sikuliaq(Underway):
             .joinpath("proc")
             .glob(f"{self.cruise_id.lower()}*.nc")
         )
-        proc_file_sizes = np.array([file.stat().st_size for file in proc_files])
-        max_proc_file_size = np.max(proc_file_sizes)
+        try:
+            proc_file_sizes = np.array([file.stat().st_size for file in proc_files])
+            max_proc_file_size = np.max(proc_file_sizes)
+        except:
+            max_proc_file_size = 0
         for file in raw_files:
             yyyymmdd = file.name.split(".")[1].split("T")[0]
             nc_name = f"{self.cruise_id.lower()}_{name}_{yyyymmdd}.nc"
