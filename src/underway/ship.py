@@ -129,7 +129,7 @@ class Sikuliaq(Underway):
             setattr(self, f"remote_{name}", self.remote_lds.joinpath(id))
         self.remote_adcp = Path(f"/Volumes/CruiseData/{self.cruise_id}/adcp/raw/{self.cruise_id}/proc")
         self.remote_ctd = Path(
-            f"/Volumes/CruiseData/{self.cruise_id}/ctd/raw/{self.cruise_id}"
+            f"/Volumes/CruiseData/{self.cruise_id}/ctd/raw"
         )
         # self.remote_ladcp = Path("/Volumes/science_share/LADCP/")
 
