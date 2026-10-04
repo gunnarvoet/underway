@@ -1,0 +1,45 @@
+# Platform:
+#   Name: R/V Sikuliaq
+#   Operator: UAF
+#   IMO Number: 9578945
+#   ICES Code: 33BI
+#   Call Sign: WDN7246
+#   MMSI Number: 338417000
+# Cruise ID: SKQ202521S
+# Instrument:
+#   Gill Instruments Ultrasonic Anemometer
+#   Model Number: WindObserver 75
+#   Serial Number:
+#   Location: Forward Mast
+#
+# Parameters:
+# Log Name	Log Time	$WIMWD,d.d,T,,M,n.n,N,m.m,M*cc
+# 
+#  where
+#   d.d = Wind direction (degrees, True)
+#   n.n = Wind speed (knots)
+#   m.m = Wind speed (m/s)
+#   * = Asterisk (ASCII 42)
+#   cc = Checksum
+#
+# Data:
+wind_gill_fwdmast_true	2025-11-25T00:00:00.1429Z	$WIMWD,72.6,T,,M,8.6,N,4.4,M*49
+wind_gill_fwdmast_true	2025-11-25T00:00:01.1418Z	$WIMWD,76.6,T,,M,9.3,N,4.8,M*45
+wind_gill_fwdmast_true	2025-11-25T00:00:02.1429Z	$WIMWD,73.6,T,,M,7.3,N,3.7,M*46
+wind_gill_fwdmast_true	2025-11-25T00:00:03.1430Z	$WIMWD,79.6,T,,M,7.7,N,4.0,M*48
+wind_gill_fwdmast_true	2025-11-25T00:00:04.1420Z	$WIMWD,76.6,T,,M,9.2,N,4.7,M*4B
+wind_gill_fwdmast_true	2025-11-25T00:00:05.1418Z	$WIMWD,78.6,T,,M,8.9,N,4.6,M*4E
+wind_gill_fwdmast_true	2025-11-25T00:00:06.1433Z	$WIMWD,87.6,T,,M,12.0,N,6.2,M*7A
+wind_gill_fwdmast_true	2025-11-25T00:00:07.1417Z	$WIMWD,84.6,T,,M,12.4,N,6.4,M*7B
+wind_gill_fwdmast_true	2025-11-25T00:00:08.1417Z	$WIMWD,78.6,T,,M,12.0,N,6.2,M*7A
+wind_gill_fwdmast_true	2025-11-25T00:00:09.1432Z	$WIMWD,81.6,T,,M,11.2,N,5.7,M*7B
+wind_gill_fwdmast_true	2025-11-25T00:00:10.1433Z	$WIMWD,79.6,T,,M,12.2,N,6.3,M*78
+wind_gill_fwdmast_true	2025-11-25T00:00:11.1433Z	$WIMWD,79.6,T,,M,12.8,N,6.6,M*77
+wind_gill_fwdmast_true	2025-11-25T00:00:12.1433Z	$WIMWD,75.6,T,,M,12.8,N,6.6,M*7B
+wind_gill_fwdmast_true	2025-11-25T00:00:13.1422Z	$WIMWD,78.6,T,,M,11.4,N,5.9,M*75
+wind_gill_fwdmast_true	2025-11-25T00:00:14.1421Z	$WIMWD,84.6,T,,M,10.9,N,5.6,M*75
+wind_gill_fwdmast_true	2025-11-25T00:00:15.1425Z	$WIMWD,88.6,T,,M,10.2,N,5.2,M*76
+wind_gill_fwdmast_true	2025-11-25T00:00:16.1437Z	$WIMWD,83.6,T,,M,9.9,N,5.1,M*4D
+wind_gill_fwdmast_true	2025-11-25T00:00:17.1427Z	$WIMWD,65.6,T,,M,10.0,N,5.1,M*74
+wind_gill_fwdmast_true	2025-11-25T00:00:18.1439Z	$WIMWD,68.6,T,,M,10.1,N,5.2,M*7B
+wind_gill_fwdmast_true	2025-11-25T00:00:19.1438Z	$WIMWD,91.6,T,,M,10.1,N,5.2,M*7D
