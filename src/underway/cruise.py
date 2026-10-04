@@ -201,3 +201,31 @@ class Cruise:
         out.attrs.pop("raw_name", None)
         out.attrs.pop("raw_size", None)
         return out
+
+    def read_met(self, freq="1min"):
+        """Return the core variables of all met sources on one time grid.
+
+        Every source with ``met=True`` is read and bin-averaged with
+        `underway.schema.bin_average`. Where two sources provide the same
+        variable, the source listed first is used.
+
+        Parameters
+        ----------
+        freq : str, optional
+            Bin width as a pandas frequency string.
+
+        Returns
+        -------
+        xr.Dataset
+            Core variables on a regular time grid. Empty if there is no data.
+        """
+        parts = []
+        for name, source in self.sources.items():
+            if not source.met or source.parser is None:
+                continue
+            ds = self.read(name)
+            if ds.sizes["time"] > 0:
+                parts.append(schema.bin_average(ds, freq))
+        if not parts:
+            return schema.empty()
+        return xr.merge(parts, compat="override", join="outer")

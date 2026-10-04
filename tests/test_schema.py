@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 import xarray as xr
 
 from underway import schema
@@ -55,3 +56,39 @@ def test_combine_skips_empty_datasets():
 
 def test_combine_no_datasets_returns_empty():
     assert schema.combine([]).sizes["time"] == 0
+
+
+def _angle_close(value, target):
+    difference = abs(value - target) % 360
+    return min(difference, 360 - difference) < 1e-6
+
+
+def test_bin_average_scalar_mean():
+    ds = _ds(["2025-01-01T00:00:10", "2025-01-01T00:00:50"], sst=[10.0, 12.0])
+    assert float(schema.bin_average(ds, "1min").sst[0]) == pytest.approx(11.0)
+
+
+def test_bin_average_heading_across_north():
+    ds = _ds(["2025-01-01T00:00:10", "2025-01-01T00:00:50"], heading=[350.0, 10.0])
+    assert _angle_close(float(schema.bin_average(ds, "1min").heading[0]), 0.0)
+
+
+def test_bin_average_wind_as_vector_pair():
+    ds = _ds(
+        ["2025-01-01T00:00:10", "2025-01-01T00:00:50"],
+        wind_speed=[5.0, 5.0],
+        wind_direction=[350.0, 10.0],
+    )
+    out = schema.bin_average(ds, "1min")
+    assert _angle_close(float(out.wind_direction[0]), 0.0)
+    assert float(out.wind_speed[0]) == pytest.approx(5.0 * np.cos(np.deg2rad(10.0)))
+
+
+def test_bin_average_drops_non_core_variables():
+    ds = _ds(["2025-01-01T00:00:10"], sst=[1.0], roll=[2.0])
+    assert list(schema.bin_average(ds, "1min").data_vars) == ["sst"]
+
+
+def test_bin_average_sets_units():
+    ds = _ds(["2025-01-01T00:00:10"], sst=[1.0])
+    assert schema.bin_average(ds, "1min").sst.attrs["units"] == "°C"

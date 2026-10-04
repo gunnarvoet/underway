@@ -164,3 +164,18 @@ def test_local_dir_tilde_expanded(monkeypatch, tmp_path):
     monkeypatch.setenv("HOME", str(tmp_path))
     c = uw.Cruise("sikuliaq", CRUISE_ID, "~/cruise")
     assert c.path("gps") == tmp_path / "cruise" / "gps"
+
+
+@needs_rsync
+def test_read_met_merges_core_variables_on_one_minute_grid(cruise):
+    cruise.sync("gps", "tsg", "wind", "air")
+    met = cruise.read_met()
+    assert {"lon", "lat", "heading", "sst", "sss", "wind_speed", "air_pressure"} <= set(
+        met.data_vars
+    )
+    assert "roll" not in met
+    assert (met.time.dt.second == 0).all()
+
+
+def test_read_met_before_sync_returns_empty(cruise):
+    assert cruise.read_met().sizes["time"] == 0

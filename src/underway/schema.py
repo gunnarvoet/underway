@@ -79,3 +79,50 @@ def combine(datasets):
     ds = ds.isel(time=~np.isnat(ds.time.values))
     _, index = np.unique(ds.time.values, return_index=True)
     return ds.isel(time=index)
+
+
+def _circular_mean(angle, freq):
+    radians = np.deg2rad(angle)
+    s = np.sin(radians).resample(time=freq).mean()
+    c = np.cos(radians).resample(time=freq).mean()
+    return np.rad2deg(np.arctan2(s, c)) % 360
+
+
+def bin_average(ds, freq):
+    """Average the core variables of `ds` in time bins.
+
+    Angles are averaged as unit vectors. Wind speed and direction are
+    averaged as a vector pair, so the averaged speed is the magnitude of the
+    mean wind vector. With u and v the wind components,
+
+    $$ \\overline{U} = \\sqrt{\\overline{u}^2 + \\overline{v}^2} $$
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Dataset following the schema.
+    freq : str
+        Bin width as a pandas frequency string, e.g. ``"1min"``.
+
+    Returns
+    -------
+    xr.Dataset
+        Core variables only, labeled with the left bin edge.
+    """
+    ds = ds[[name for name in ds.data_vars if name in CORE]]
+    out = xr.Dataset()
+    wind_pair = "wind_speed" in ds and "wind_direction" in ds
+    for name in ds.data_vars:
+        if wind_pair and name in ("wind_speed", "wind_direction"):
+            continue
+        if name in ANGULAR:
+            out[name] = _circular_mean(ds[name], freq)
+        else:
+            out[name] = ds[name].resample(time=freq).mean()
+    if wind_pair:
+        radians = np.deg2rad(ds["wind_direction"])
+        u = (ds["wind_speed"] * np.sin(radians)).resample(time=freq).mean()
+        v = (ds["wind_speed"] * np.cos(radians)).resample(time=freq).mean()
+        out["wind_speed"] = np.hypot(u, v)
+        out["wind_direction"] = np.rad2deg(np.arctan2(u, v)) % 360
+    return conform(out)
