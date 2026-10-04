@@ -92,3 +92,21 @@ def test_bin_average_drops_non_core_variables():
 def test_bin_average_sets_units():
     ds = _ds(["2025-01-01T00:00:10"], sst=[1.0])
     assert schema.bin_average(ds, "1min").sst.attrs["units"] == "°C"
+
+
+def test_combine_duplicate_time_prefers_row_with_data():
+    a = _ds(["2025-01-01T00:00:00"], sst=[np.nan])
+    b = _ds(["2025-01-01T00:00:00"], sst=[7.0])
+    assert schema.combine([a, b]).sst.values.tolist() == [7.0]
+
+
+def test_bin_average_direction_below_360():
+    ds = _ds(
+        ["2025-01-01T00:00:10", "2025-01-01T00:00:50"],
+        heading=[350.0, 10.0],
+        wind_speed=[5.0, 5.0],
+        wind_direction=[350.0, 10.0],
+    )
+    out = schema.bin_average(ds, "1min")
+    assert float(out.heading[0]) < 360.0
+    assert float(out.wind_direction[0]) < 360.0

@@ -21,10 +21,15 @@ def _num(series):
 
 
 def _seconds_of_day(hhmmss):
-    """Convert ``hhmmss[.ss]`` strings to seconds since midnight."""
-    return (
-        _num(hhmmss.str[:2]) * 3600 + _num(hhmmss.str[2:4]) * 60 + _num(hhmmss.str[4:])
-    )
+    """Convert ``hhmmss[.ss]`` strings to seconds since midnight.
+
+    Values outside a valid time of day give `NaN`.
+    """
+    hours = _num(hhmmss.str[:2])
+    minutes = _num(hhmmss.str[2:4])
+    seconds = _num(hhmmss.str[4:])
+    valid = (hours < 24) & (minutes < 60) & (seconds < 61)
+    return (hours * 3600 + minutes * 60 + seconds).where(valid)
 
 
 def _degrees(value, hemisphere, ndeg):
@@ -35,11 +40,15 @@ def _degrees(value, hemisphere, ndeg):
 
 
 def parse(sentences, name="", dropped=0):
-    """Parse NMEA sentences into a dataset with one time step per `$GPZDA`.
+    """Parse NMEA sentences into a dataset with one time step per ZDA sentence.
 
-    Sentences are assigned to the most recent `$GPZDA`. A sentence missing
-    from one fix leaves `NaN` in that fix only. Sentences ahead of the first
-    `$GPZDA` and fixes whose time cannot be parsed are dropped and counted.
+    Sentences are assigned to the most recent ZDA sentence, so each group of
+    sentences must start with ZDA. A sentence missing from one fix leaves
+    `NaN` in that fix only. Sentences ahead of the first ZDA and fixes whose
+    time cannot be parsed are dropped and counted. The talker id (``GP``,
+    ``IN``, ...) is ignored. A GGA position is used only if its time equals
+    the ZDA time of its group. If GGA sentences are present and none of them
+    match, the sentence order is not ZDA-first and a warning is logged.
 
     Parameters
     ----------
@@ -63,7 +72,9 @@ def parse(sentences, name="", dropped=0):
         return schema.empty()
     f = s.str.split(",", expand=True).reindex(columns=range(10)).astype(object)
     tag = f[0]
-    fix = (tag == "$GPZDA").cumsum()
+    # sentence type without the two-letter talker id, e.g. "$GPZDA" -> "ZDA"
+    kind = tag.str[3:].where(tag.str.len() == 6)
+    fix = (kind == "ZDA").cumsum()
     dropped += int((fix == 0).sum())
 
     def pick(mask, columns):
@@ -71,7 +82,7 @@ def parse(sentences, name="", dropped=0):
         rows.index = fix[rows.index]
         return rows[~rows.index.duplicated()]
 
-    zda = pick(tag == "$GPZDA", [1, 2, 3, 4])
+    zda = pick(kind == "ZDA", [1, 2, 3, 4])
     date = pd.to_datetime(
         zda[4] + "-" + zda[3] + "-" + zda[2], format="%Y-%m-%d", errors="coerce"
     )
@@ -79,16 +90,22 @@ def parse(sentences, name="", dropped=0):
     out = pd.DataFrame(index=zda.index)
     out["time"] = date + pd.to_timedelta(seconds, unit="s").dt.round("ms")
 
-    gga = pick(tag == "$GPGGA", [1, 2, 3, 4, 5])
-    gga = gga[gga[1] == zda[1].reindex(gga.index)]
+    gga = pick(kind == "GGA", [1, 2, 3, 4, 5])
+    n_gga = len(gga)
+    gga = gga[_num(gga[1]) == _num(zda[1].reindex(gga.index))]
+    if n_gga and gga.empty:
+        log.warning(
+            "%s: no GGA time matches its ZDA time, sentence order not supported",
+            name,
+        )
     out["lat"] = _degrees(gga[2], gga[3], 2)
     out["lon"] = _degrees(gga[4], gga[5], 3)
 
-    vtg = pick(tag == "$GPVTG", [1, 5])
+    vtg = pick(kind == "VTG", [1, 5])
     out["cog"] = _num(vtg[1])
     out["sog"] = _num(vtg[5]) * schema.KNOTS_TO_MS
 
-    hdt = pick(tag == "$GPHDT", [1])
+    hdt = pick(kind == "HDT", [1])
     out["heading"] = _num(hdt[1])
 
     psxn = pick((tag == "$PSXN") & (f[1] == "23"), [2, 3, 5])

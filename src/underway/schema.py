@@ -77,15 +77,30 @@ def combine(datasets):
         join="outer",
     )
     ds = ds.isel(time=~np.isnat(ds.time.values))
-    _, index = np.unique(ds.time.values, return_index=True)
+    times = ds.time.values
+    _, index = np.unique(times, return_index=True)
+    if len(index) < len(times):
+        # among rows with the same time stamp, keep the one with most data
+        missing = np.zeros(len(times), dtype=int)
+        for name in ds.data_vars:
+            values = ds[name].values
+            if ds[name].dims == ("time",) and values.dtype.kind == "f":
+                missing += np.isnan(values)
+        ds = ds.isel(time=np.lexsort((missing, times)))
+        _, index = np.unique(ds.time.values, return_index=True)
     return ds.isel(time=index)
+
+
+def _wrap(degrees):
+    """Map angles to [0, 360). A second modulo turns a rounded 360.0 into 0."""
+    return (degrees % 360) % 360
 
 
 def _circular_mean(angle, freq):
     radians = np.deg2rad(angle)
     s = np.sin(radians).resample(time=freq).mean()
     c = np.cos(radians).resample(time=freq).mean()
-    return np.rad2deg(np.arctan2(s, c)) % 360
+    return _wrap(np.rad2deg(np.arctan2(s, c)))
 
 
 def bin_average(ds, freq):
@@ -124,5 +139,5 @@ def bin_average(ds, freq):
         u = (ds["wind_speed"] * np.sin(radians)).resample(time=freq).mean()
         v = (ds["wind_speed"] * np.cos(radians)).resample(time=freq).mean()
         out["wind_speed"] = np.hypot(u, v)
-        out["wind_direction"] = np.rad2deg(np.arctan2(u, v)) % 360
+        out["wind_direction"] = _wrap(np.rad2deg(np.arctan2(u, v)))
     return conform(out)

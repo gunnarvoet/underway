@@ -96,3 +96,14 @@ def test_update_failed_write_keeps_old_product(raw, product, monkeypatch):
     with xr.open_dataset(product) as ds:
         assert ds.sizes["time"] == 2
     assert list(product.parent.glob("*.tmp")) == []
+
+
+def test_product_path_differs_for_equal_names_in_two_directories(tmp_path):
+    raw_dir = tmp_path / "raw"
+    a = cache.product_path(
+        tmp_path, "X", "s", raw_dir / "a" / "data.txt", raw_dir=raw_dir
+    )
+    b = cache.product_path(
+        tmp_path, "X", "s", raw_dir / "b" / "data.txt", raw_dir=raw_dir
+    )
+    assert a != b

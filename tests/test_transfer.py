@@ -117,3 +117,8 @@ def test_copy_unreadable_file_reported_after_others_copied(remote, local, monkey
 def test_make_readonly_sets_mode_0400(remote):
     transfer.make_readonly(remote)
     assert (remote / "a.20250101").stat().st_mode & 0o777 == 0o400
+
+
+def test_copy_exclude_matches_directory_name(remote, local):
+    transfer.copy(remote, local, pattern="*/contour/*", exclude=("wh300",))
+    assert _names(local) == []

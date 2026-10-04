@@ -5,13 +5,18 @@ import os
 import xarray as xr
 
 
-def product_path(proc_dir, cruise_id, source, raw):
+def product_path(proc_dir, cruise_id, source, raw, raw_dir=None):
     """Return the product path for a raw file.
 
     The full raw file name is kept, since some raw names carry the date in
-    the suffix (``ins_seapath_position.20251126T0000Z``).
+    the suffix (``ins_seapath_position.20251126T0000Z``). With `raw_dir`
+    given, directories between `raw_dir` and the file become part of the
+    name, so equal file names in two directories give two products.
     """
-    return proc_dir / f"{cruise_id.lower()}_{source}_{raw.name}.nc"
+    name = raw.name
+    if raw_dir is not None:
+        name = "__".join(raw.relative_to(raw_dir).parts)
+    return proc_dir / f"{cruise_id.lower()}_{source}_{name}.nc"
 
 
 def is_current(product, raw):

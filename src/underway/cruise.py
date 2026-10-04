@@ -199,7 +199,9 @@ class Cruise:
         proc_dir = self.path(name, "proc")
         proc_dir.mkdir(parents=True, exist_ok=True)
         for raw in raw_files:
-            product = cache.product_path(proc_dir, self.cruise_id, name, raw)
+            product = cache.product_path(
+                proc_dir, self.cruise_id, name, raw, raw_dir=raw_dir
+            )
             try:
                 cache.update(raw, product, source.parser, force=reparse)
             except Exception as err:

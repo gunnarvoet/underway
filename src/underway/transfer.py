@@ -65,9 +65,11 @@ def copy(src_dir, dst_dir, pattern="*", exclude=(), verbose=False):
     """
     failed = []
     for src in sorted(src_dir.glob(pattern)):
-        if any(fnmatch.fnmatch(src.name, item) for item in exclude):
+        relative = src.relative_to(src_dir)
+        # like rsync, an exclude pattern applies to directories and files
+        if any(fnmatch.fnmatch(p, item) for p in relative.parts for item in exclude):
             continue
-        dst = dst_dir / src.relative_to(src_dir)
+        dst = dst_dir / relative
         try:
             if not src.is_file():
                 continue

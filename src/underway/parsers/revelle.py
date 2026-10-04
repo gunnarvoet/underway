@@ -92,7 +92,7 @@ def _read_file(file):
         + pd.to_numeric(hhmmss.str[4:6], errors="coerce")
     )
     # a drop of more than 12 h in time of day marks the next UTC day
-    day = (seconds.diff() < -43200).cumsum()
+    day = (seconds.ffill().diff() < -43200).cumsum()
     time = date + pd.to_timedelta(day, unit="D") + pd.to_timedelta(seconds, unit="s")
     # sea surface temperature tag is ST where present, else the TSG tag TT
     sst_tag = "ST" if "ST" in df.columns else "TT"

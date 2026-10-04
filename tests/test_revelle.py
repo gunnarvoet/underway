@@ -77,3 +77,26 @@ def test_read_date_line_cut_returns_empty(tmp_path, data):
     file = tmp_path / "170412.MET"
     file.write_bytes(lines[0] + b"# Wed 12-A")
     assert revelle.read(file).sizes["time"] == 0
+
+
+HEADER = (
+    "# R/V Revelle MET System,CRUISE:TEST\r\n"
+    "# Wed 12-Apr-17  02:12:38\r\n"
+    "# Met Data - Corrected\r\n"
+)
+
+
+def test_read_sog_converted_from_knots_and_negative_position(tmp_path):
+    file = tmp_path / "170412.MET"
+    file.write_text(HEADER + "#Time SP LA LO\r\n021238 10.0 -7.5 -134.5\r\n")
+    first = revelle.read(file).isel(time=0)
+    assert float(first.sog) == pytest.approx(10.0 * schema.KNOTS_TO_MS)
+    assert (float(first.lat), float(first.lon)) == pytest.approx((-7.5, -134.5))
+
+
+def test_read_rollover_with_unparsable_time_at_midnight(tmp_path):
+    file = tmp_path / "170412.MET"
+    rows = "235959 1.0\r\n0000xx 1.0\r\n000019 1.0\r\n"
+    file.write_text(HEADER + "#Time AT\r\n" + rows)
+    ds = revelle.read(file)
+    assert ds.time.values[-1] == np.datetime64("2017-04-13T00:00:19")
