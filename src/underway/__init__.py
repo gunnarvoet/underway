@@ -51,6 +51,14 @@ Core variables are present where the ship provides them: `lon`, `lat`,
 pressure in hPa, wind is true wind. All other variables keep ship-specific
 names. Names and units are defined in `underway.schema`.
 
+## Adding a ship
+
+A new ship needs a parser for each raw file format that no existing parser
+reads, an entry in the ship table, and tests against real files. The steps,
+with a worked example, are in `underway.ships`. A single extra stream on a
+supported ship needs no change to the package. Declare it for the cruise with
+`underway.cruise.Cruise.add_source`.
+
 ## Modules
 
 - `underway.cruise`: the `Cruise` object with `sync`, `read`, `read_met`.

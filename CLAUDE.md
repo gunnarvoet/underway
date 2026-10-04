@@ -45,6 +45,8 @@ make servedocs                                             # live docs preview
 
 ## Adding a ship or a file format
 
+The user-facing guide with a worked example is the module docstring of `src/underway/ships.py`. Keep it in step with the code when parser helpers or `Source` fields change.
+
 1. Add a parser module in `parsers/` with `read(files)`. Map columns onto the core names in `schema.CORE`, convert to schema units, and pass ship-specific names with units to `schema.conform`.
 2. Add a truncated real file to `tests/make_fixtures.py`, rebuild `tests/data`, and test the parser against known values from that file.
 3. Add a `Ship` entry with its servers and sources to `ships.py`.

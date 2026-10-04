@@ -46,7 +46,9 @@ Core variables present where the ship provides them: `lon`, `lat`, `heading`, `c
 
 # Documentation
 
-API documentation is built with [pdoc](https://pdoc.dev/) from the docstrings:
+The documentation is at <https://gunnarvoet.github.io/underway/underway.html>. It includes a guide to adding a new ship on the page of the `underway.ships` module.
+
+It is built with [pdoc](https://pdoc.dev/) from the docstrings:
 
 ```sh
 git submodule update --init   # theme, once after cloning

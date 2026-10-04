@@ -31,8 +31,8 @@ dependencies = [
 ]
 
 [project.urls]
-# Homepage = "https://example.com"
-# Documentation = "https://gunnarvoet.github.io/underway/underway.html"
+Homepage = "https://github.com/gunnarvoet/underway"
+Documentation = "https://gunnarvoet.github.io/underway/underway.html"
 Repository = "https://github.com/gunnarvoet/underway.git"
 Issues = "https://github.com/gunnarvoet/underway/issues"
 Changelog = "https://github.com/gunnarvoet/underway/blob/main/HISTORY.md"
