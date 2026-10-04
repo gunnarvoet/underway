@@ -8,6 +8,7 @@
 -   Parsers for all four ships tested against raw files.
 -   Removed `io`, `ship`, `network`, `utils`, the plot helpers, and the live position functions. The old interface is at tag `v2025.10`.
 -   Requires Python 3.11.
+-   API documentation with pdoc (`make docs`), built and deployed by a GitHub workflow.
 
 ## 2025.10
 

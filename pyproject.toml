@@ -39,6 +39,7 @@ Changelog = "https://github.com/gunnarvoet/underway/blob/main/HISTORY.md"
 
 [dependency-groups]
 dev = [
+    "pdoc>=16.0.0",
     "pytest>=8.4.2",
     "ruff>=0.14.3",
 ]

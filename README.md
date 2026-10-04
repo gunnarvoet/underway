@@ -44,4 +44,16 @@ gps = uw.parsers.seapath.read(sorted(raw_dir.glob("ins_seapath_position.*")))
 
 Core variables present where the ship provides them: `lon`, `lat`, `heading`, `cog`, `sog`, `sst`, `sss`, `wind_speed`, `wind_direction`, `air_temperature`, `air_pressure`, `relative_humidity`. Speeds are in m/s, pressure in hPa, wind is true wind. All other variables keep ship-specific names.
 
+# Documentation
+
+API documentation is built with [pdoc](https://pdoc.dev/) from the docstrings:
+
+```sh
+git submodule update --init   # theme, once after cloning
+make docs                     # build into docs/ and open
+make servedocs                # live preview
+```
+
+# Old interface
+
 The interface up to version 2025.10 (`uw.ship.Sikuliaq` and others) is available at git tag `v2025.10`.

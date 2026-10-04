@@ -11,7 +11,11 @@ uv run pytest tests/test_lds.py::test_read_tsg_first_sample   # single test
 uv run ruff check src tests                                # lint
 uv run ruff format src tests                               # format
 uv run python tests/make_fixtures.py                       # rebuild tests/data from the real files
+make docs                                                  # build pdoc docs into docs/ and open them
+make servedocs                                             # live docs preview
 ```
+
+- Docs are built with pdoc from the docstrings (`-d numpy --math`), themed by the submodule `.pdoc-theme-gv` (`git submodule update --init` after cloning). `docs/` is build output and ignored. The package docstring in `src/underway/__init__.py` is the front page, so keep it in step with `README.md`. `.github/workflows/docs.yml` builds with uv on pushes to `main` and deploys to GitHub Pages.
 
 - pytest runs with `filterwarnings = ["error"]` and one targeted ignore for the numpy warning that `netCDF4` emits on import. Any other warning fails a test. Pass `data_vars`, `coords`, `compat`, `join` explicitly to `xr.concat` and `xr.merge`.
 - `tests/test_real_data.py` reads the full sample files (motive cruise 2, DY202, AR73 and FLEAT on the MOD archive) and skips where they are absent. `tests/make_fixtures.py` needs the same files.
