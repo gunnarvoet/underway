@@ -34,7 +34,7 @@ def _degrees(value, hemisphere, ndeg):
     return degrees * sign
 
 
-def parse(sentences, name=""):
+def parse(sentences, name="", dropped=0):
     """Parse NMEA sentences into a dataset with one time step per `$GPZDA`.
 
     Sentences are assigned to the most recent `$GPZDA`. A sentence missing
@@ -47,6 +47,8 @@ def parse(sentences, name=""):
         One NMEA sentence per element, in file order, checksum optional.
     name : str, optional
         File name used in the log message.
+    dropped : int, optional
+        Number of lines the caller already dropped, added to the logged count.
 
     Returns
     -------
@@ -62,7 +64,7 @@ def parse(sentences, name=""):
     f = s.str.split(",", expand=True).reindex(columns=range(10)).astype(object)
     tag = f[0]
     fix = (tag == "$GPZDA").cumsum()
-    dropped = int((fix == 0).sum())
+    dropped += int((fix == 0).sum())
 
     def pick(mask, columns):
         rows = f.loc[mask & (fix > 0), columns]

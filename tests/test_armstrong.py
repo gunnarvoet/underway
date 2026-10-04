@@ -63,3 +63,36 @@ def test_read_gps_fix_count_and_no_heading(data):
     ds = armstrong.read_gps(data / "armstrong/ar20230511_1600.CNAV_3050")
     assert ds.sizes["time"] == 10
     assert "heading" not in ds
+
+
+def test_read_met_last_line_cut_inside_field_dropped(tmp_path, data):
+    text = (data / "armstrong/AR230512_0000.csv").read_text()
+    file = tmp_path / "AR230512_0000.csv"
+    file.write_text(text + "2023/05/12, 00:10:09.349, 41.5")
+    assert armstrong.read_met(file).sizes["time"] == 10
+
+
+def test_read_met_zero_byte_file_returns_empty(tmp_path):
+    file = tmp_path / "AR230512_0000.csv"
+    file.touch()
+    assert armstrong.read_met(file).sizes["time"] == 0
+
+
+def test_read_gps_last_line_cut_inside_field_not_used(tmp_path, data):
+    name = "ar20230511_1600.CNAV_3050"
+    raw = (data / "armstrong" / name).read_bytes()
+    file = tmp_path / name
+    file.write_bytes(
+        raw
+        + b"NAV 2023/05/11 16:00:10.045 CNAV $GPZDA,160010.00,11,05,2023,00,00*67\r\n"
+        + b"NAV 2023/05/11 16:00:10.162 CNAV $GPVTG,3"
+    )
+    ds = armstrong.read_gps(file)
+    assert ds.sizes["time"] == 11
+    assert np.isnan(ds.cog.values[-1])
+
+
+def test_read_gps_zero_byte_file_returns_empty(tmp_path):
+    file = tmp_path / "ar20230511_1600.CNAV_3050"
+    file.touch()
+    assert armstrong.read_gps(file).sizes["time"] == 0

@@ -35,7 +35,7 @@ uv run python tests/make_fixtures.py                       # rebuild tests/data 
 
 ### Reading
 
-`Cruise.read(name)` updates the product of every raw file whose size changed, then combines all products in `proc`. Products are read even when their raw file is absent (dangling git-annex link). After a parser change, call `read(name, reparse=True)`, since a parser change does not invalidate products on its own. Sources with `cache=False` (TechSAS netCDF) are parsed directly on every call.
+`Cruise.read(name)` updates the product of every raw file whose size changed, then combines all products in `proc`. Products are read even when their raw file is absent (dangling git-annex link). After a parser change, call `read(name, reparse=True)`, since a parser change does not invalidate products on its own. Sources with `cache=False` (TechSAS netCDF) are parsed directly on every call. A raw file whose parser raises is logged as a warning and skipped. Text parsers cut off a last line that does not end in a newline (`_common.read_complete`), since the file may still be written.
 
 `Cruise.read_met(freq)` bin-averages the core variables of every source with `met=True`. Angles are vector-averaged. Where two sources provide the same variable, the source listed first in `ships.py` is used.
 

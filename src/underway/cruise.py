@@ -157,7 +157,7 @@ class Cruise:
                 )
                 if source.readonly:
                     transfer.make_readonly(local)
-            except transfer.TransferError as err:
+            except (transfer.TransferError, OSError) as err:
                 failures[source.name] = str(err)
         if failures:
             lines = [f"{name}: {message}" for name, message in failures.items()]
@@ -168,6 +168,8 @@ class Cruise:
 
         Raw files whose size changed since the last call are parsed again.
         All other days come from the netCDF products in ``<source>/proc``.
+        A raw file that cannot be parsed is logged as a warning and skipped,
+        so one bad file does not hide the rest of the record.
 
         Parameters
         ----------
@@ -187,12 +189,23 @@ class Cruise:
         raw_dir = self.path(name, "raw")
         raw_files = sorted(f for f in raw_dir.glob(source.pattern) if f.is_file())
         if not source.cache:
-            return source.parser(raw_files)
+            datasets = []
+            for raw in raw_files:
+                try:
+                    datasets.append(source.parser([raw]))
+                except Exception as err:
+                    log.warning("%s: not parsed (%r)", raw.name, err)
+            return schema.combine(datasets)
         proc_dir = self.path(name, "proc")
         proc_dir.mkdir(parents=True, exist_ok=True)
         for raw in raw_files:
             product = cache.product_path(proc_dir, self.cruise_id, name, raw)
-            cache.update(raw, product, source.parser, force=reparse)
+            try:
+                cache.update(raw, product, source.parser, force=reparse)
+            except Exception as err:
+                # one bad file must not hide the other days; an existing
+                # product of this file is kept
+                log.warning("%s: not parsed (%r)", raw.name, err)
         datasets = []
         for product in sorted(proc_dir.glob(f"{self.cruise_id.lower()}_{name}_*.nc")):
             with xr.open_dataset(product) as ds:

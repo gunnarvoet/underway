@@ -1,12 +1,13 @@
 """R/V Neil Armstrong dsLog met csv files and raw CNAV GPS files."""
 
+import io
 import logging
 
 import pandas as pd
 
 from .. import schema
 from . import nmea
-from ._common import as_paths
+from ._common import as_paths, read_complete
 
 log = logging.getLogger("underway")
 
@@ -87,9 +88,10 @@ MET_EXTRA = {
 
 
 def _read_met_file(file):
+    data, partial = read_complete(file)
     try:
         df = pd.read_csv(
-            file,
+            io.BytesIO(data),
             skiprows=1,
             skipinitialspace=True,
             na_values=["NAN", "NODATA"],
@@ -108,7 +110,7 @@ def _read_met_file(file):
     df = df.apply(pd.to_numeric, errors="coerce")
     df = df.rename(columns=MET_NAMES)
     df["time"] = time
-    dropped = int(df["time"].isna().sum())
+    dropped = int(df["time"].isna().sum()) + partial
     if dropped:
         log.warning("%s: dropped %d malformed lines", file.name, dropped)
     df = df.dropna(subset=["time"])
@@ -136,9 +138,10 @@ def read_met(files):
 
 
 def _read_gps_file(file):
-    lines = pd.Series(file.read_text(errors="replace").splitlines(), dtype=str)
+    data, partial = read_complete(file)
+    lines = pd.Series(data.decode(errors="replace").splitlines(), dtype=str)
     sentences = lines.str.split(" CNAV ", n=1).str[1]
-    return nmea.parse(sentences, name=file.name)
+    return nmea.parse(sentences, name=file.name, dropped=partial)
 
 
 def read_gps(files):

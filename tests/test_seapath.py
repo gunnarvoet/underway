@@ -85,3 +85,16 @@ def test_read_zero_byte_file_returns_empty(tmp_path):
 def test_read_every_variable_has_units(data):
     ds = seapath.read(data / "sikuliaq" / NAME)
     assert all("units" in ds[v].attrs for v in ds.data_vars)
+
+
+def test_read_last_line_cut_inside_field_not_used(tmp_path, data):
+    text = (data / "sikuliaq" / NAME).read_text()
+    file = tmp_path / NAME
+    file.write_text(
+        text
+        + "ins_seapath_position\t2025-11-26T00:00:10.33Z\t$GPZDA,000010.30,26,11,2025,,*64\n"
+        + "ins_seapath_position\t2025-11-26T00:00:10.62Z\t$GPHDT,2"
+    )
+    ds = seapath.read(file)
+    assert ds.sizes["time"] == 11
+    assert np.isnan(ds.heading.values[-1])

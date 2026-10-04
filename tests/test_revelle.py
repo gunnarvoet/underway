@@ -54,3 +54,26 @@ def test_read_time_rolls_over_midnight(tmp_path, data):
 def test_read_every_variable_has_units(data):
     ds = revelle.read(data / "revelle/170412.MET")
     assert all("units" in ds[v].attrs for v in ds.data_vars)
+
+
+def test_read_last_line_cut_dropped(tmp_path, data):
+    raw = (data / "revelle/170412.MET").read_bytes()
+    lines = raw.splitlines(keepends=True)
+    file = tmp_path / "170412.MET"
+    file.write_bytes(raw + lines[-1][:30])
+    assert revelle.read(file).sizes["time"] == 10
+
+
+@pytest.mark.parametrize("nlines", [0, 1, 2, 3, 4])
+def test_read_header_in_progress_returns_empty(tmp_path, data, nlines):
+    lines = (data / "revelle/170412.MET").read_bytes().splitlines(keepends=True)
+    file = tmp_path / "170412.MET"
+    file.write_bytes(b"".join(lines[:nlines]))
+    assert revelle.read(file).sizes["time"] == 0
+
+
+def test_read_date_line_cut_returns_empty(tmp_path, data):
+    lines = (data / "revelle/170412.MET").read_bytes().splitlines(keepends=True)
+    file = tmp_path / "170412.MET"
+    file.write_bytes(lines[0] + b"# Wed 12-A")
+    assert revelle.read(file).sizes["time"] == 0

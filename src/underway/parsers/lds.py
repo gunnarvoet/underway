@@ -51,8 +51,10 @@ STREAMS = {
 
 def _read_file(file, stream):
     spec = STREAMS[stream]
-    lines = read_lds_lines(file)
+    lines, partial = read_lds_lines(file)
     if lines.empty:
+        if partial:
+            log.warning("%s: dropped %d malformed lines", file.name, partial)
         return schema.empty()
     time = pd.to_datetime(lines["time"], format="ISO8601", utc=True, errors="coerce")
     fields = lines["payload"].str.split("*", n=1).str[0].str.split(",", expand=True)
@@ -64,7 +66,7 @@ def _read_file(file, stream):
             values = float("nan")
         out[name] = values * spec.scale.get(name, 1.0)
     good = out.dropna()
-    dropped = len(out) - len(good)
+    dropped = len(out) - len(good) + partial
     if dropped:
         log.warning("%s: dropped %d malformed lines", file.name, dropped)
     if good.empty:

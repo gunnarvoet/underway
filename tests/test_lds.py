@@ -73,3 +73,31 @@ def test_read_zero_byte_file_returns_empty(tmp_path):
 def test_read_unknown_stream_raises(data):
     with pytest.raises(ValueError, match="unknown stream"):
         lds.read(data / "sikuliaq/tsg_sbe45_fwd.20251127T0000Z", stream="nope")
+
+
+def test_read_last_line_cut_inside_field_dropped_and_counted(tmp_path, data, caplog):
+    name = "tsg_sbe45_fwd.20251127T0000Z"
+    text = (data / "sikuliaq" / name).read_text()
+    file = tmp_path / name
+    file.write_text(
+        text
+        + "tsg_sbe45_fwd\t2025-11-27T00:01:43.6268Z\t 26.9018,  5.51276,  35.0435, 15"
+    )
+    with caplog.at_level(logging.WARNING, logger="underway"):
+        ds = lds.read(file, stream="tsg")
+    assert ds.sizes["time"] == 20
+    assert "dropped 1" in caplog.text
+
+
+def test_read_line_with_two_fields_only_returns_empty(tmp_path):
+    file = tmp_path / "tsg_sbe45_fwd.20251127T0000Z"
+    file.write_text("# header\ntsg_sbe45_fwd\t2025-11-27T00:00:0\n")
+    assert lds.read(file, stream="tsg").sizes["time"] == 0
+
+
+def test_read_payload_starting_with_quote_does_not_raise(tmp_path):
+    file = tmp_path / "tsg_sbe45_fwd.20251127T0000Z"
+    file.write_text(
+        '# header\ntsg_sbe45_fwd\t2025-11-27T00:00:03.6Z\t"26.9, 5.5, 35.0, 1538.9\n'
+    )
+    assert lds.read(file, stream="tsg").sizes["time"] == 0

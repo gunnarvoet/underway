@@ -1,3 +1,5 @@
+from underway import transfer
+import logging
 import shutil
 
 import pytest
@@ -179,3 +181,43 @@ def test_read_met_merges_core_variables_on_one_minute_grid(cruise):
 
 def test_read_met_before_sync_returns_empty(cruise):
     assert cruise.read_met().sizes["time"] == 0
+
+
+def _flaky_parser(files):
+    if any(f.name.endswith("bad") for f in files):
+        raise ValueError("boom")
+    return uw.parsers.seapath.read(files)
+
+
+@needs_rsync
+@pytest.mark.parametrize("cached", [True, False])
+def test_read_unparseable_file_logged_and_other_files_returned(cruise, caplog, cached):
+    cruise.add_source(
+        "gps",
+        drive="CruiseData",
+        remote=CRUISE_ID + "/lds/raw/ins_seapath_position",
+        pattern="ins_seapath_position.*",
+        parser=_flaky_parser,
+        cache=cached,
+    )
+    cruise.sync("gps")
+    (cruise.path("gps", "raw") / "ins_seapath_position.bad").write_text("x")
+    with caplog.at_level(logging.WARNING, logger="underway"):
+        gps = cruise.read("gps")
+    assert gps.sizes["time"] == 10
+    assert "ins_seapath_position.bad" in caplog.text
+
+
+@needs_rsync
+def test_sync_os_error_in_one_source_does_not_stop_the_others(cruise, monkeypatch):
+    real = transfer.TRANSFER["rsync"]
+
+    def flaky(src_dir, dst_dir, **kwargs):
+        if src_dir.name == "ins_seapath_position":
+            raise FileNotFoundError("share dropped")
+        return real(src_dir, dst_dir, **kwargs)
+
+    monkeypatch.setitem(transfer.TRANSFER, "rsync", flaky)
+    with pytest.raises(SyncError, match="share dropped"):
+        cruise.sync("gps", "tsg")
+    assert (cruise.path("tsg", "raw") / STREAMS["tsg_sbe45_fwd"]).exists()

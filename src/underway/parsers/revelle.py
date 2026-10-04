@@ -1,11 +1,12 @@
 """R/V Roger Revelle MetAcq files (``<yymmdd>.MET``)."""
 
+import io
 import logging
 
 import pandas as pd
 
 from .. import schema
-from ._common import as_paths
+from ._common import as_paths, read_complete
 
 log = logging.getLogger("underway")
 
@@ -51,22 +52,38 @@ EXTRA = {
 }
 
 
-def _read_start_date(file):
-    """Return the date on header line 2, e.g. ``# Wed 12-Apr-17  02:12:38``."""
-    with open(file) as f:
-        f.readline()
-        fields = f.readline().split()
-    return pd.to_datetime(fields[2], format="%d-%b-%y")
+def _read_start_date(data):
+    """Return the date on header line 2, e.g. ``# Wed 12-Apr-17  02:12:38``.
+
+    Returns None if the header is incomplete or the date cannot be parsed.
+    """
+    header = data.split(b"\n", 4)
+    if len(header) < 5:
+        return None
+    fields = header[1].decode(errors="replace").split()
+    if len(fields) < 3:
+        return None
+    date = pd.to_datetime(fields[2], format="%d-%b-%y", errors="coerce")
+    return None if pd.isna(date) else date
 
 
 def _read_file(file):
-    if file.stat().st_size == 0:
+    data, partial = read_complete(file)
+    date = _read_start_date(data)
+    if date is None:
+        # no data yet, or a header that is still being written
         return schema.empty()
-    date = _read_start_date(file)
-    df = pd.read_csv(
-        file, sep=r"\s+", skiprows=3, dtype={"#Time": str}, on_bad_lines="skip"
-    )
-    if df.empty:
+    try:
+        df = pd.read_csv(
+            io.BytesIO(data),
+            sep=r"\s+",
+            skiprows=3,
+            dtype={"#Time": str},
+            on_bad_lines="skip",
+        )
+    except pd.errors.EmptyDataError:
+        return schema.empty()
+    if df.empty or "#Time" not in df.columns:
         return schema.empty()
     hhmmss = df["#Time"]
     seconds = (
@@ -85,7 +102,7 @@ def _read_file(file):
     df = df.apply(pd.to_numeric, errors="coerce").rename(columns=names)
     df = df.where(df != MISSING)
     df["time"] = time
-    dropped = int(df["time"].isna().sum())
+    dropped = int(df["time"].isna().sum()) + partial
     if dropped:
         log.warning("%s: dropped %d malformed lines", file.name, dropped)
     df = df.dropna(subset=["time"])

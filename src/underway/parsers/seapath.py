@@ -24,6 +24,6 @@ def read(files):
     """
     datasets = []
     for file in as_paths(files):
-        lines = read_lds_lines(file)
-        datasets.append(nmea.parse(lines["payload"], name=file.name))
+        lines, partial = read_lds_lines(file)
+        datasets.append(nmea.parse(lines["payload"], name=file.name, dropped=partial))
     return schema.combine(datasets)
