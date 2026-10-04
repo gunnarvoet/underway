@@ -1,5 +1,14 @@
 # History
 
+## 2026.10
+
+-   Rewrote the package around a `Cruise` object with declared sources. Ships are tables of sources in `ships.py`. Parsers are plain functions per file format in `parsers`.
+-   Common variable names and units across ships.
+-   netCDF cache keyed on raw file size replaces the line-count resume and the size thresholds.
+-   Parsers for all four ships tested against raw files.
+-   Removed `io`, `ship`, `network`, `utils`, the plot helpers, and the live position functions. The old interface is at tag `v2025.10`.
+-   Requires Python 3.11.
+
 ## 2025.10
 
 -   Updates during cruise DY202 on RRS Discovery.
